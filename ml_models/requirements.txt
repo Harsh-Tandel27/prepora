@@ -1,0 +1,31 @@
+# Core ML and data processing
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+
+# Speech analysis and NLP
+nltk>=3.8.0
+textblob>=0.17.0
+
+# Visualization (optional)
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Advanced ML models
+xgboost>=2.0.0
+lightgbm>=4.0.0
+
+# Deep learning (optional)
+torch>=2.0.0
+transformers>=4.30.0
+
+# Audio processing (for future VAPI integration)
+librosa>=0.10.0
+soundfile>=0.12.0
+
+# API and web integration
+fastapi>=0.100.0
+uvicorn>=0.20.0
+requests>=2.28.0
+
+# Note: pickle is included in Python standard library
