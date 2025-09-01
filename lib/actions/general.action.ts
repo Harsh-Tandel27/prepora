@@ -132,8 +132,8 @@ export async function getLatestInterviews(
       }))
       .filter(interview => interview.finalized === true && interview.userId !== userId) // Filter in memory
       .sort((a, b) => {
-        const dateA = a.createdAt?.toDate?.() || a.createdAt || new Date(0);
-        const dateB = b.createdAt?.toDate?.() || b.createdAt || new Date(0);
+        const dateA = a.createdAt?.toDate?.() || (a.createdAt ? new Date(a.createdAt) : new Date(0));
+        const dateB = b.createdAt?.toDate?.() || (b.createdAt ? new Date(b.createdAt) : new Date(0));
         return dateB.getTime() - dateA.getTime(); // Descending order
       })
       .slice(0, limit); // Limit after filtering
@@ -168,8 +168,8 @@ export async function getInterviewsByUserId(
         ...doc.data(),
       }))
       .sort((a, b) => {
-        const dateA = a.createdAt?.toDate?.() || a.createdAt || new Date(0);
-        const dateB = b.createdAt?.toDate?.() || b.createdAt || new Date(0);
+        const dateA = a.createdAt?.toDate?.() || (a.createdAt ? new Date(a.createdAt) : new Date(0));
+        const dateB = b.createdAt?.toDate?.() || (b.createdAt ? new Date(b.createdAt) : new Date(0));
         return dateB.getTime() - dateA.getTime(); // Descending order
       });
 

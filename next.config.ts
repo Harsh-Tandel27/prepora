@@ -28,6 +28,23 @@ const nextConfig: NextConfig = {
         path: false,
         os: false,
         crypto: false,
+        stream: false,
+        util: false,
+        buffer: false,
+        events: false,
+        url: false,
+        querystring: false,
+        http: false,
+        https: false,
+        zlib: false,
+        assert: false,
+        constants: false,
+        _stream_duplex: false,
+        _stream_passthrough: false,
+        _stream_readable: false,
+        _stream_transform: false,
+        _stream_writable: false,
+        _stream_duplex: false,
       };
     }
     

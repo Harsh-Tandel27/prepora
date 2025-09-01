@@ -717,3 +717,4 @@ detailed explanations, cool features, and exercises to boost your skills. Give i
 <a href="https://jsmastery.pro/next15" target="_blank">
    <img src="https://github.com/user-attachments/assets/b8760e69-1f81-4a71-9108-ceeb1de36741" alt="Project Banner">
 </a>
+the ai should not speak whil i am answering and the button to sumbit the ans should be press enter when finised answering until then it should not go to next question and also refrain it form saming full names if there are middle name as well then only consider first name and the questions seem to be same for every option
