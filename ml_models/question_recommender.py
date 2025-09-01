@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import pickle
 import re
+import random
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
@@ -112,6 +113,9 @@ class SimpleQuestionRecommender:
         
         if difficulty:
             filtered_df = filtered_df[filtered_df['Difficulty'] == difficulty]
+        
+        # Shuffle the questions to ensure variety
+        filtered_df = filtered_df.sample(frac=1, random_state=random.randint(1, 1000)).reset_index(drop=True)
         
         if limit:
             filtered_df = filtered_df.head(limit)

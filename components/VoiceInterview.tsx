@@ -26,6 +26,12 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
   const [audioLevel, setAudioLevel] = useState(0);
   const [showAnswerPrompt, setShowAnswerPrompt] = useState(false);
   const [isWaitingForAnswer, setIsWaitingForAnswer] = useState(false);
+  const [currentAnswer, setCurrentAnswer] = useState('');
+  const [isAnswerComplete, setIsAnswerComplete] = useState(false);
+  const [accumulatedSpeech, setAccumulatedSpeech] = useState('');
+  const [selectedVoice, setSelectedVoice] = useState('pNInz6obpgDQGcFmaJgB'); // Default to Adam
+  const [availableVoices, setAvailableVoices] = useState<any[]>([]);
+  const [showVoiceSelector, setShowVoiceSelector] = useState(false);
   
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -33,7 +39,28 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
-  // No need to initialize ElevenLabs client - we'll use API endpoint
+  // Get first name only
+  const getFirstName = (fullName: string) => {
+    return fullName.split(' ')[0];
+  };
+
+  const firstName = getFirstName(userName);
+
+  // Fetch available voices
+  useEffect(() => {
+    const fetchVoices = async () => {
+      try {
+        const response = await fetch('/api/tts/speak');
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableVoices(data.voices);
+        }
+      } catch (error) {
+        console.error('Error fetching voices:', error);
+      }
+    };
+    fetchVoices();
+  }, []);
 
   // Initialize audio context for visual feedback
   useEffect(() => {
@@ -44,7 +71,7 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
 
   // Audio level monitoring
   useEffect(() => {
-    if (isListening && audioContextRef.current) {
+    if (isListening && audioContextRef.current && typeof window !== 'undefined' && navigator?.mediaDevices?.getUserMedia) {
       navigator.mediaDevices.getUserMedia({ audio: true })
         .then(stream => {
           const source = audioContextRef.current!.createMediaStreamSource(stream);
@@ -64,7 +91,11 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
           };
           updateAudioLevel();
         })
-        .catch(err => console.error('Error accessing microphone:', err));
+        .catch(err => {
+          console.error('Error accessing microphone:', err);
+          // Don't show error to user, just disable audio level visualization
+          setAudioLevel(0);
+        });
     } else {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -75,100 +106,163 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
 
   // Initialize speech recognition
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
-      recognitionRef.current = new (window as any).webkitSpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
-      
-      recognitionRef.current.onresult = (event: any) => {
-        let finalTranscript = '';
-        let interimTranscript = '';
+    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window && !isInterviewActive) {
+      try {
+        recognitionRef.current = new (window as any).webkitSpeechRecognition();
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
+        recognitionRef.current.lang = 'en-US';
+        recognitionRef.current.maxAlternatives = 1;
         
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript;
-          } else {
-            interimTranscript += transcript;
+        // Configure for better capture of filler words and pauses
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
+        
+        recognitionRef.current.onresult = (event: any) => {
+          let finalTranscript = '';
+          let interimTranscript = '';
+          
+          // Process all results to build complete transcript
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' ';
+            } else {
+              interimTranscript += transcript;
+            }
           }
-        }
-        
-        if (finalTranscript) {
-          const newEntry: ConversationEntry = {
-            role: 'candidate',
-            content: finalTranscript.trim(),
-            timestamp: new Date()
-          };
-          setConversation(prev => [...prev, newEntry]);
-          setTranscript(prev => [...prev, finalTranscript.trim()]);
-          setStatus('Answer received, processing...');
-          setShowAnswerPrompt(false);
-          setIsWaitingForAnswer(false);
           
-          // Auto-advance to next question after a short delay
-          setTimeout(() => {
-            moveToNextQuestion();
-          }, 2000);
-        }
-      };
-
-      recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        setStatus(`Error: ${event.error}`);
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-      };
-    }
-  }, [currentQuestionIndex, questions]);
-
-  const speakText = async (text: string) => {
-    try {
-      setIsSpeaking(true);
-      setStatus('AI is speaking...');
-      
-      // Use our API endpoint for TTS
-      const response = await fetch('/api/tts/speak', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text }),
-      });
-
-      if (response.ok) {
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        
-        if (audioRef.current) {
-          audioRef.current.src = audioUrl;
-          audioRef.current.play();
+          // Update current answer with interim results
+          if (interimTranscript) {
+            setCurrentAnswer(accumulatedSpeech + ' ' + interimTranscript);
+          }
           
-          audioRef.current.onended = () => {
-            setIsSpeaking(false);
-            URL.revokeObjectURL(audioUrl);
-          };
-        }
-      } else {
-        throw new Error('TTS API failed');
+          // If we have final results, append to accumulated speech
+          if (finalTranscript) {
+            const newAccumulated = accumulatedSpeech + ' ' + finalTranscript;
+            setAccumulatedSpeech(newAccumulated);
+            setCurrentAnswer(newAccumulated);
+            setIsAnswerComplete(true);
+            setStatus('Answer recorded. Press "Submit Answer" when ready to continue.');
+          }
+        };
+
+        recognitionRef.current.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          setStatus(`Error: ${event.error}`);
+          setIsListening(false);
+        };
+
+        recognitionRef.current.onend = () => {
+          // Don't stop listening automatically - let user control it
+          if (isWaitingForAnswer && !isSpeaking) {
+            // Restart recognition if it ends unexpectedly
+            setTimeout(() => {
+              if (isWaitingForAnswer && !isListening && !isSpeaking) {
+                startListening();
+              }
+            }, 100);
+          }
+        };
+      } catch (error) {
+        console.error('Error initializing speech recognition:', error);
+        setStatus('Speech recognition not available in this browser');
       }
-    } catch (error) {
-      console.error('Error with TTS:', error);
-      setIsSpeaking(false);
-      // Fallback to browser speech synthesis
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      utterance.volume = 0.8;
-      
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      
-      speechSynthesis.speak(utterance);
     }
+  }, [currentQuestionIndex, questions, isInterviewActive]);
+
+  const speakText = async (text: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      try {
+        setIsSpeaking(true);
+        setStatus('AI is speaking...');
+        
+        // Stop listening while AI is speaking to prevent capturing AI voice
+        if (isListening) {
+          stopListening();
+        }
+        
+        // Use our API endpoint for TTS
+        fetch('/api/tts/speak', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            text,
+            voiceId: selectedVoice,
+            voiceSettings: {
+              stability: 0.5,
+              similarityBoost: 0.5,
+              style: 0.0,
+              useSpeakerBoost: true
+            }
+          }),
+        })
+        .then(response => {
+          if (response.ok) {
+            return response.blob();
+          } else {
+            throw new Error('TTS API failed');
+          }
+        })
+        .then(audioBlob => {
+          const audioUrl = URL.createObjectURL(audioBlob);
+          
+          if (audioRef.current) {
+            audioRef.current.src = audioUrl;
+            audioRef.current.play();
+            
+            audioRef.current.onended = () => {
+              setIsSpeaking(false);
+              URL.revokeObjectURL(audioUrl);
+              resolve(); // Resolve when audio finishes
+            };
+            
+            audioRef.current.onerror = () => {
+              setIsSpeaking(false);
+              URL.revokeObjectURL(audioUrl);
+              reject(new Error('Audio playback failed'));
+            };
+          } else {
+            setIsSpeaking(false);
+            resolve();
+          }
+        })
+        .catch(error => {
+          console.error('Error with TTS:', error);
+          setIsSpeaking(false);
+          
+          // Fallback to browser speech synthesis
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.rate = 0.9;
+          utterance.pitch = 1;
+          utterance.volume = 0.8;
+          
+          utterance.onstart = () => {
+            setIsSpeaking(true);
+            // Stop listening while AI is speaking to prevent capturing AI voice
+            if (isListening) {
+              stopListening();
+            }
+          };
+          utterance.onend = () => {
+            setIsSpeaking(false);
+            resolve(); // Resolve when speech synthesis finishes
+          };
+          utterance.onerror = () => {
+            setIsSpeaking(false);
+            reject(new Error('Speech synthesis failed'));
+          };
+          
+          speechSynthesis.speak(utterance);
+        });
+      } catch (error) {
+        console.error('Error in speakText:', error);
+        setIsSpeaking(false);
+        reject(error);
+      }
+    });
   };
 
   const askNextQuestion = async () => {
@@ -181,15 +275,41 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
       };
       setConversation(prev => [...prev, interviewerEntry]);
       
-      setStatus(`Question ${currentQuestionIndex + 1} of ${questions.length}`);
-      await speakText(question);
+      setStatus(`Question ${currentQuestionIndex + 1} of ${questions.length} - Listening for your answer...`);
       
-      // Show answer prompt and start listening after the AI finishes speaking
-      setTimeout(() => {
+      // Start speaking and set up listening to start when AI finishes
+      speakText(question).then(() => {
+        // This will be called when AI finishes speaking
         setShowAnswerPrompt(true);
         setIsWaitingForAnswer(true);
-        startListening();
-      }, 1000);
+        setCurrentAnswer('');
+        setAccumulatedSpeech('');
+        setIsAnswerComplete(false);
+        startListening(); // Start listening immediately after AI finishes
+      });
+    }
+  };
+
+  const submitAnswer = () => {
+    if (currentAnswer.trim()) {
+      const newEntry: ConversationEntry = {
+        role: 'candidate',
+        content: currentAnswer.trim(),
+        timestamp: new Date()
+      };
+      setConversation(prev => [...prev, newEntry]);
+      setTranscript(prev => [...prev, currentAnswer.trim()]);
+      
+      // Stop listening and clear current answer
+      stopListening();
+      setCurrentAnswer('');
+      setAccumulatedSpeech('');
+      setIsAnswerComplete(false);
+      setShowAnswerPrompt(false);
+      setIsWaitingForAnswer(false);
+      
+      // Move to next question
+      moveToNextQuestion();
     }
   };
 
@@ -207,15 +327,18 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
       };
       setConversation(prev => [...prev, interviewerEntry]);
       
-      setStatus(`Question ${nextIndex + 1} of ${questions.length}`);
-      await speakText(question);
+      setStatus(`Question ${nextIndex + 1} of ${questions.length} - Listening for your answer...`);
       
-      // Show answer prompt and start listening after the AI finishes speaking
-      setTimeout(() => {
+      // Start speaking and set up listening to start when AI finishes
+      speakText(question).then(() => {
+        // This will be called when AI finishes speaking
         setShowAnswerPrompt(true);
         setIsWaitingForAnswer(true);
-        startListening();
-      }, 1000);
+        setCurrentAnswer('');
+        setAccumulatedSpeech('');
+        setIsAnswerComplete(false);
+        startListening(); // Start listening immediately after AI finishes
+      });
     } else {
       endInterview();
     }
@@ -228,8 +351,8 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
     setCurrentQuestionIndex(0);
     setStatus('Starting interview...');
     
-    // Welcome message
-    const welcomeMessage = `Hello ${userName}! Welcome to your interview. I'll be asking you ${questions.length} questions. Please answer each one as thoroughly as you can. Let's begin with the first question.`;
+    // Welcome message with first name only
+    const welcomeMessage = `Hello ${firstName}! Welcome to your interview. I'll be asking you ${questions.length} questions. Please answer each one as thoroughly as you can. When you're done answering, press the "Submit Answer" button to continue. Let's begin with the first question.`;
     
     const welcomeEntry: ConversationEntry = {
       role: 'interviewer',
@@ -241,16 +364,33 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
     await speakText(welcomeMessage);
     
     // Start with first question after welcome
-    setTimeout(() => {
-      askNextQuestion();
-    }, 2000);
+    askNextQuestion();
   };
 
   const startListening = () => {
-    if (recognitionRef.current && !isListening) {
-      recognitionRef.current.start();
-      setIsListening(true);
-      setStatus('Listening for your answer...');
+    if (recognitionRef.current && !isListening && !isSpeaking && typeof window !== 'undefined') {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+        setStatus('Listening for your answer...');
+        
+        // Restart recognition every 45 seconds to avoid timeouts for longer answers with pauses
+        setTimeout(() => {
+          if (isListening && recognitionRef.current && isWaitingForAnswer) {
+            recognitionRef.current.stop();
+            setTimeout(() => {
+              if (isWaitingForAnswer && !isSpeaking) {
+                recognitionRef.current.start();
+                setStatus('Listening for your answer... (continued)');
+              }
+            }, 100);
+          }
+        }, 45000);
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
+        setStatus('Error starting speech recognition');
+        setIsListening(false);
+      }
     }
   };
 
@@ -270,7 +410,7 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
     setIsWaitingForAnswer(false);
     setStatus('Interview completed!');
     
-    const endMessage = "Thank you for completing the interview. Your responses have been recorded and will be analyzed for feedback.";
+    const endMessage = `Thank you for completing the interview, ${firstName}. Your responses have been recorded and will be analyzed for feedback.`;
     const endEntry: ConversationEntry = {
       role: 'interviewer',
       content: endMessage,
@@ -314,6 +454,9 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
       setShowAnswerPrompt(false);
       setIsWaitingForAnswer(false);
       stopListening();
+      setCurrentAnswer('');
+      setAccumulatedSpeech('');
+      setIsAnswerComplete(false);
       moveToNextQuestion();
     }
   };
@@ -328,6 +471,44 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
         <p className="text-gray-300">
           {questions.length} questions • {currentQuestionIndex + 1} of {questions.length}
         </p>
+        
+        {/* Voice Selector */}
+        {!isInterviewActive && (
+          <div className="mt-4">
+            <button
+              onClick={() => setShowVoiceSelector(!showVoiceSelector)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 mx-auto"
+            >
+              🎵 Change AI Voice
+            </button>
+            
+            {showVoiceSelector && (
+              <div className="mt-4 bg-dark-300 p-4 rounded-lg border border-gray-600">
+                <h3 className="text-white font-semibold mb-3">Select AI Voice Tone:</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {availableVoices.map((voice) => (
+                    <button
+                      key={voice.id}
+                      onClick={() => {
+                        setSelectedVoice(voice.id);
+                        setShowVoiceSelector(false);
+                      }}
+                      className={`p-3 rounded-lg border-2 transition-all ${
+                        selectedVoice === voice.id
+                          ? 'border-primary-500 bg-primary-500/20 text-white'
+                          : 'border-gray-600 bg-dark-200 text-gray-300 hover:border-primary-400'
+                      }`}
+                    >
+                      <div className="font-medium">{voice.name}</div>
+                      <div className="text-xs text-gray-400">{voice.tone}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        
         <div className="mt-4">
           <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
             isInterviewActive 
@@ -365,6 +546,21 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
         </div>
       )}
 
+      {/* Browser Compatibility Warning */}
+      {!isInterviewActive && typeof window !== 'undefined' && !('webkitSpeechRecognition' in window) && (
+        <div className="mb-6 bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4">
+          <div className="flex items-center space-x-2">
+            <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <span className="text-yellow-300 font-medium">Browser Compatibility</span>
+          </div>
+          <p className="text-yellow-200 text-sm mt-1">
+            Voice recognition may not work in this browser. Please use Chrome, Edge, or Safari for the best experience.
+          </p>
+        </div>
+      )}
+
       {/* Current Question Display */}
       {isInterviewActive && currentQuestionIndex < questions.length && (
         <div className="bg-dark-300 p-6 rounded-lg mb-6 border border-gray-600">
@@ -393,9 +589,31 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
               <h3 className="text-xl font-bold text-white">Your Turn to Answer</h3>
             </div>
             <p className="text-gray-300 mb-4">
-              Please speak your answer clearly. The system is listening for your response.
+              Please speak your answer clearly. You can take your time and provide a detailed response. When you're finished, press "Submit Answer" to continue.
             </p>
+            
+            {/* Current Answer Display */}
+            {currentAnswer && (
+              <div className="bg-dark-300/50 rounded-lg p-4 mb-4 text-left">
+                <h4 className="text-white font-semibold mb-2">Your Answer:</h4>
+                <p className="text-gray-200">{currentAnswer}</p>
+                <div className="mt-2 text-sm text-green-400">
+                  ✓ Continuously listening - speak as much as you need
+                </div>
+              </div>
+            )}
+            
             <div className="flex flex-wrap gap-3 justify-center">
+              <button
+                onClick={submitAnswer}
+                disabled={!currentAnswer.trim()}
+                className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:text-gray-400 text-white rounded-lg transition-colors flex items-center space-x-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Submit Answer</span>
+              </button>
               <button
                 onClick={skipToNextQuestion}
                 className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center space-x-2"
@@ -403,7 +621,7 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-                <span>Skip to Next Question</span>
+                <span>Skip Question</span>
               </button>
               <button
                 onClick={stopListening}

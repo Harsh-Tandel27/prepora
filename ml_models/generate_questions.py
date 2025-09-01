@@ -8,6 +8,7 @@ import sys
 import json
 import os
 import re
+import random
 
 # Add current directory to path so we can import our ML modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -87,31 +88,78 @@ def generate_questions(role, level, techstack, type_focus, amount):
         category = map_techstack_to_category(techstack)
         difficulty = map_level_to_difficulty(level)
         
-        # Get questions by filters
-        questions_df = recommender.get_questions_by_filters(
-            category=category,
-            difficulty=difficulty,
-            limit=amount
-        )
+        # Get all available categories and difficulties for better variety
+        all_categories = recommender.get_all_categories()
+        all_difficulties = recommender.get_all_difficulties()
         
         questions = []
         
-        # If we have enough questions from filters, use them
-        if len(questions_df) >= amount:
-            questions = questions_df['Question'].head(amount).tolist()
-        else:
-            # If not enough questions, get some from filters and some similar ones
-            filter_questions = questions_df['Question'].tolist()
-            remaining_needed = amount - len(filter_questions)
-            
-            # Get similar questions based on role
-            similar_questions = recommender.recommend_questions_by_similarity(
-                role, n_recommendations=remaining_needed
+        # Strategy 1: Get questions from the specific category and difficulty
+        if category and difficulty:
+            category_questions = recommender.get_questions_by_filters(
+                category=category,
+                difficulty=difficulty,
+                limit=amount * 2  # Get more to allow for random selection
             )
-            
-            # Combine questions
-            questions = filter_questions + [q['question'] for q in similar_questions]
-            questions = questions[:amount]  # Ensure we don't exceed amount
+            if len(category_questions) > 0:
+                questions.extend(category_questions['Question'].tolist())
+        
+        # Strategy 2: If we don't have enough, get questions from the same category but different difficulties
+        if len(questions) < amount and category:
+            for diff in all_difficulties:
+                if diff != difficulty:
+                    more_questions = recommender.get_questions_by_filters(
+                        category=category,
+                        difficulty=diff,
+                        limit=amount - len(questions)
+                    )
+                    if len(more_questions) > 0:
+                        questions.extend(more_questions['Question'].tolist())
+                        if len(questions) >= amount:
+                            break
+        
+        # Strategy 3: If still not enough, get questions from different categories but same difficulty
+        if len(questions) < amount and difficulty:
+            for cat in all_categories:
+                if cat != category:
+                    more_questions = recommender.get_questions_by_filters(
+                        category=cat,
+                        difficulty=difficulty,
+                        limit=amount - len(questions)
+                    )
+                    if len(more_questions) > 0:
+                        questions.extend(more_questions['Question'].tolist())
+                        if len(questions) >= amount:
+                            break
+        
+        # Strategy 4: If still not enough, get random questions from any category/difficulty
+        if len(questions) < amount:
+            all_questions = recommender.get_questions_by_filters(limit=amount * 3)
+            if len(all_questions) > 0:
+                all_question_list = all_questions['Question'].tolist()
+                # Randomly sample to avoid always getting the same questions
+                random.shuffle(all_question_list)
+                questions.extend(all_question_list[:amount - len(questions)])
+        
+        # Remove duplicates and limit to requested amount
+        unique_questions = list(dict.fromkeys(questions))  # Preserves order while removing duplicates
+        questions = unique_questions[:amount]
+        
+        # If we still don't have enough questions, use fallback questions
+        if len(questions) < amount:
+            fallback_questions = [
+                "Explain the concept of object-oriented programming.",
+                "What is the difference between a stack and a queue?",
+                "How would you approach debugging a production issue?",
+                "Describe a challenging project you worked on.",
+                "What is your experience with version control systems?",
+                "How do you stay updated with technology trends?",
+                "Explain the concept of RESTful APIs.",
+                "What is your approach to code optimization?",
+                "How do you handle conflicting requirements?",
+                "Describe your experience with testing methodologies."
+            ]
+            questions.extend(fallback_questions[:amount - len(questions)])
         
         # Clean questions for voice assistant
         cleaned_questions = [clean_question_text(q) for q in questions]
