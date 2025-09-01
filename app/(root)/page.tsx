@@ -17,7 +17,7 @@ async function Home() {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
-        <h2 className="text-2xl font-bold">Welcome to PrepWise</h2>
+        <h2 className="text-2xl font-bold">Welcome to Prepora</h2>
         <p className="text-lg text-center max-w-md">
           Please sign in to access your interviews and start practicing
         </p>

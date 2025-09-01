@@ -1,28 +1,27 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 
-import Agent from "@/components/Agent";
 import { getRandomInterviewCover } from "@/lib/utils";
-
-import {
-  getFeedbackByInterviewId,
-  getInterviewById,
-} from "@/lib/actions/general.action";
-import { getCurrentUser } from "@/lib/actions/auth.action";
 import DisplayTechIcons from "@/components/DisplayTechIcons";
+import InterviewWrapper from '@/components/InterviewWrapper';
+import { getInterviewById } from "@/lib/actions/general.action";
+import { getCurrentUser } from "@/lib/actions/auth.action";
 
-const InterviewDetails = async ({ params }: RouteParams) => {
+const InterviewDetails = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
-
   const user = await getCurrentUser();
+  
+  if (!user) {
+    redirect("/sign-in");
+  }
 
   const interview = await getInterviewById(id);
-  if (!interview) redirect("/");
+  if (!interview) {
+    redirect("/");
+  }
 
-  const feedback = await getFeedbackByInterviewId({
-    interviewId: id,
-    userId: user?.id!,
-  });
+  const questions = interview.questions;
+  const userName = user?.name || 'User';
 
   return (
     <>
@@ -47,14 +46,14 @@ const InterviewDetails = async ({ params }: RouteParams) => {
         </p>
       </div>
 
-      <Agent
-        userName={user?.name!}
-        userId={user?.id}
-        interviewId={id}
-        type="interview"
-        questions={interview.questions}
-        feedbackId={feedback?.id}
-      />
+      {questions && questions.length > 0 ? (
+        <InterviewWrapper
+          questions={questions}
+          userName={userName}
+        />
+      ) : (
+        <div>Loading questions...</div>
+      )}
     </>
   );
 };

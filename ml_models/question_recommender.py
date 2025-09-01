@@ -218,7 +218,7 @@ class SimpleQuestionRecommender:
         self.tfidf_vectorizer = model_state['tfidf_vectorizer']
         self.question_vectors = model_state['question_vectors']
         
-        print(f"📂 Loaded question recommender from {file_path}")
+        # Model loaded successfully
     
     def get_model_summary(self) -> Dict[str, Any]:
         """Get summary of the question recommendation system"""

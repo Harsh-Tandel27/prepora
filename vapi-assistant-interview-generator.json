@@ -1,0 +1,56 @@
+{
+  "name": "Interview Generator",
+  "description": "Generates interview questions using ML models",
+  "firstMessage": "Hello! I'll help you create an interview. Let me gather some information to generate the best questions for you.",
+  "transcriber": {
+    "provider": "deepgram",
+    "model": "nova-2",
+    "language": "en"
+  },
+  "voice": {
+    "provider": "11labs",
+    "voiceId": "sarah",
+    "stability": 0.4,
+    "similarityBoost": 0.8,
+    "speed": 0.9,
+    "style": 0.5,
+    "useSpeakerBoost": true
+  },
+  "model": {
+    "provider": "openai",
+    "model": "gpt-4",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are an interview generation assistant. Your job is to collect information from the user and then generate an interview using ML models.\n\nInformation to collect:\n- Job role (e.g., Frontend Developer, Data Scientist)\n- Experience level (Junior, Medium, Senior)\n- Technology stack (e.g., JavaScript,React,Python)\n- Question type (Technical, Behavioral, Mixed)\n- Number of questions (5-15)\n\nOnce you have all the information, tell the user you'll generate their interview using ML models and it will be ready shortly.\n\nKeep the conversation friendly and professional. Ask one question at a time and confirm each piece of information before moving to the next."
+      }
+    ]
+  },
+  "variables": [
+    {
+      "name": "role",
+      "type": "string",
+      "description": "Job role for the interview"
+    },
+    {
+      "name": "level", 
+      "type": "string",
+      "description": "Experience level (Junior, Medium, Senior)"
+    },
+    {
+      "name": "techstack",
+      "type": "string",
+      "description": "Technology stack"
+    },
+    {
+      "name": "type",
+      "type": "string",
+      "description": "Question type (Technical, Behavioral, Mixed)"
+    },
+    {
+      "name": "amount",
+      "type": "number",
+      "description": "Number of questions to generate"
+    }
+  ]
+}

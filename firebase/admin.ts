@@ -7,12 +7,22 @@ function initFirebaseAdmin() {
   const apps = getApps();
 
   if (!apps.length) {
+    // Get the private key and properly format it
+    const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
+    if (!privateKey) {
+      throw new Error("FIREBASE_ADMIN_PRIVATE_KEY environment variable is not set");
+    }
+
+    // Remove quotes and convert escaped newlines to actual newlines
+    const formattedPrivateKey = privateKey
+      .replace(/^"|"$/g, '') // Remove surrounding quotes
+      .replace(/\\n/g, '\n'); // Convert escaped newlines to actual newlines
+
     initializeApp({
       credential: cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        // Replace newlines in the private key
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+        privateKey: formattedPrivateKey,
       }),
     });
   }

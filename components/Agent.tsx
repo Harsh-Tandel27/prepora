@@ -21,6 +21,13 @@ interface SavedMessage {
   content: string;
 }
 
+interface MLAnalysis {
+  qualityScore: number;
+  fillerWords: number;
+  repetitions: number;
+  recommendations: string[];
+}
+
 const Agent = ({
   userName,
   userId,
@@ -34,6 +41,8 @@ const Agent = ({
   const [messages, setMessages] = useState<SavedMessage[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastMessage, setLastMessage] = useState<string>("");
+  const [mlAnalysis, setMlAnalysis] = useState<MLAnalysis | null>(null);
+  const [realTimeScore, setRealTimeScore] = useState<number>(0);
 
   useEffect(() => {
     const onCallStart = () => {
@@ -48,6 +57,11 @@ const Agent = ({
       if (message.type === "transcript" && message.transcriptType === "final") {
         const newMessage = { role: message.role, content: message.transcript };
         setMessages((prev) => [...prev, newMessage]);
+        
+        // Real-time ML analysis for user messages
+        if (message.role === "user") {
+          analyzeSpeechWithML(message.transcript);
+        }
       }
     };
 
@@ -81,6 +95,39 @@ const Agent = ({
       vapi.off("error", onError);
     };
   }, []);
+
+  // ML-powered speech analysis
+  const analyzeSpeechWithML = async (speechText: string) => {
+    try {
+      const response = await fetch('/api/ml/analyze-speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: speechText,
+          duration: 30.0 // Approximate duration
+        })
+      });
+
+      if (response.ok) {
+        const analysis = await response.json();
+        if (analysis.success) {
+          setMlAnalysis(analysis.analysis);
+          setRealTimeScore(analysis.analysis.quality_score);
+          
+          // Log real-time insights
+          console.log('🎯 ML Analysis:', {
+            qualityScore: analysis.analysis.quality_score,
+            fillerWords: analysis.analysis.filler_word_analysis.filler_count,
+            recommendations: analysis.analysis.recommendations
+          });
+        }
+      }
+    } catch (error) {
+      console.error('ML Analysis Error:', error);
+    }
+  };
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -174,6 +221,14 @@ const Agent = ({
               className="rounded-full object-cover size-[120px]"
             />
             <h3>{userName}</h3>
+            
+            {/* Real-time ML Score */}
+            {realTimeScore > 0 && (
+              <div className="mt-2 text-center">
+                <div className="text-sm text-primary-200">ML Quality Score</div>
+                <div className="text-lg font-bold text-white">{realTimeScore.toFixed(1)}/100</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -191,6 +246,32 @@ const Agent = ({
               {lastMessage}
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Real-time ML Insights */}
+      {mlAnalysis && (
+        <div className="mt-4 p-4 bg-dark-200 rounded-lg border border-primary-200/20">
+          <h4 className="text-primary-200 font-semibold mb-2">🎯 ML Insights</h4>
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div>
+              <span className="text-light-400">Quality:</span>
+              <span className="text-white ml-2">{mlAnalysis.qualityScore.toFixed(1)}/100</span>
+            </div>
+            <div>
+              <span className="text-light-400">Filler Words:</span>
+              <span className="text-white ml-2">{mlAnalysis.fillerWords}</span>
+            </div>
+            <div>
+              <span className="text-light-400">Repetitions:</span>
+              <span className="text-white ml-2">{mlAnalysis.repetitions}</span>
+            </div>
+          </div>
+          {mlAnalysis.recommendations.length > 0 && (
+            <div className="mt-2">
+              <span className="text-light-400 text-xs">💡 {mlAnalysis.recommendations[0]}</span>
+            </div>
+          )}
         </div>
       )}
 
