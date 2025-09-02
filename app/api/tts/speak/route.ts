@@ -1,124 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 
-// Available ElevenLabs voices with different tones
-const VOICE_OPTIONS = [
+const client = new ElevenLabsClient({
+  apiKey: process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY || '',
+});
+
+// Essential voice options for interviews
+export const VOICE_OPTIONS = [
   {
     id: 'pNInz6obpgDQGcFmaJgB',
     name: 'Adam',
-    description: 'Professional and confident',
-    tone: 'Professional'
+    tone: 'Professional & Clear',
+    description: 'Perfect for formal interviews'
   },
   {
     id: '21m00Tcm4TlvDq8ikWAM',
     name: 'Rachel',
-    description: 'Friendly and approachable',
-    tone: 'Friendly'
+    tone: 'Friendly & Approachable',
+    description: 'Great for casual conversations'
   },
   {
     id: 'AZnzlk1XvdvUeBnXmlld',
     name: 'Domi',
-    description: 'Energetic and enthusiastic',
-    tone: 'Energetic'
-  },
-  {
-    id: 'EXAVITQu4vr4xnSDxMaL',
-    name: 'Bella',
-    description: 'Calm and soothing',
-    tone: 'Calm'
-  },
-  {
-    id: 'ErXwobaYiN019PkySvjV',
-    name: 'Antoni',
-    description: 'Warm and encouraging',
-    tone: 'Warm'
-  },
-  {
-    id: 'MF3mGyEYCl7XYWbV9V6O',
-    name: 'Elli',
-    description: 'Clear and articulate',
-    tone: 'Clear'
-  },
-  {
-    id: 'TxGEqnHWrfWFTfGW9XjX',
-    name: 'Josh',
-    description: 'Casual and conversational',
-    tone: 'Casual'
-  },
-  {
-    id: 'VR6AewLTigWG4xSOukaG',
-    name: 'Arnold',
-    description: 'Authoritative and commanding',
-    tone: 'Authoritative'
+    tone: 'Enthusiastic & Motivating',
+    description: 'Encourages and motivates'
   }
 ];
 
+// Simple voice settings for better quality
+const DEFAULT_VOICE_SETTINGS = {
+  stability: 0.7,
+  similarityBoost: 0.8,
+  style: 0.2,
+  useSpeakerBoost: true
+};
+
 export async function GET() {
   try {
-    return NextResponse.json({ voices: VOICE_OPTIONS });
+    return NextResponse.json({ 
+      voices: VOICE_OPTIONS,
+      defaultSettings: DEFAULT_VOICE_SETTINGS
+    });
   } catch (error) {
     console.error('Error fetching voices:', error);
-    return NextResponse.json({ error: 'Failed to fetch voices' }, { status: 500 });
+    return NextResponse.json({ 
+      voices: VOICE_OPTIONS,
+      defaultSettings: DEFAULT_VOICE_SETTINGS,
+      error: 'Failed to fetch voices from ElevenLabs'
+    });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, voiceId = 'pNInz6obpgDQGcFmaJgB', voiceSettings = {} } = await request.json();
-    
+    const { text, voiceId, voiceSettings } = await request.json();
+
     if (!text) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
 
-    const apiKey = process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'ElevenLabs API key not configured' }, { status: 500 });
-    }
+    // Use provided settings or defaults
+    const settings = voiceSettings || DEFAULT_VOICE_SETTINGS;
 
-    const elevenLabs = new ElevenLabsClient({
-      apiKey: apiKey,
+    // Generate speech with optimized settings
+    const audio = await client.textToSpeech.convert(voiceId || 'pNInz6obpgDQGcFmaJgB', {
+      text: text,
+      voiceSettings: settings,
+      modelId: 'eleven_monolingual_v1'
     });
 
-    // Default voice settings with option to override
-    const defaultSettings = {
-      stability: 0.5,
-      similarityBoost: 0.5,
-      style: 0.0,
-      useSpeakerBoost: true
-    };
-
-    const finalSettings = { ...defaultSettings, ...voiceSettings };
-
-    const audio = await elevenLabs.textToSpeech.convert(
-      voiceId,
-      {
-        text: text,
-        modelId: 'eleven_monolingual_v1',
-        voiceSettings: finalSettings
-      }
-    );
-
-    // Convert ReadableStream to Buffer
-    const reader = audio.getReader();
-    const chunks: Uint8Array[] = [];
-    
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-    }
-    
-    const audioBuffer = Buffer.concat(chunks);
-
-    return new NextResponse(audioBuffer, {
+    return new NextResponse(audio, {
       headers: {
         'Content-Type': 'audio/mpeg',
-        'Content-Length': audioBuffer.length.toString(),
+        'Cache-Control': 'public, max-age=3600',
       },
     });
-
   } catch (error) {
-    console.error('TTS Error:', error);
+    console.error('Error generating speech:', error);
     return NextResponse.json({ error: 'Failed to generate speech' }, { status: 500 });
   }
 }
