@@ -52,16 +52,33 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
   const firstName = userName.split(' ')[0];
 
   // Function to clean up speech recognition transcriptions
+  // IMPORTANT: Preserves filler words (um, ahh, like, you know) for speech analysis and evaluation
   const cleanTranscription = (text: string): string => {
     if (!text) return '';
     
     return text
-      // Remove common speech recognition artifacts and repetition
-      .replace(/\b(N|Np|Npm|water|pip|pack|package|manage|managed|like|and|the|is|used|to)\b/gi, '')
-      // Remove excessive whitespace
+      // CRITICAL: Preserve ALL filler words and natural speech patterns for evaluation
+      // These are important for speech analysis, confidence assessment, and interview evaluation
+      
+      // Only remove obvious speech recognition artifacts that don't represent actual speech
+      .replace(/\b(N|Np|Npm)\b/gi, '') // Remove only obvious artifacts
+      
+      // Preserve natural speech patterns:
+      // - "um", "uh", "ah", "ahh" (hesitation sounds)
+      // - "like", "you know", "I mean" (filler phrases)
+      // - "so", "well", "basically" (transition words)
+      // - All other natural speech elements are kept intact
+      
+      // Add pause detection for natural speech patterns
+      .replace(/\s*\.\.\.\s*/g, ' -- ') // Convert ... to pauses
+      .replace(/\s*\.\s*/g, ' -- ') // Convert single dots to pauses
+      
+      // Remove excessive whitespace but preserve single spaces
       .replace(/\s+/g, ' ')
+      
       // Remove leading/trailing whitespace
       .trim()
+      
       // Remove empty strings
       .replace(/^\s*$/, '');
   };
@@ -135,9 +152,21 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
         recognitionRef.current.lang = 'en-US';
         recognitionRef.current.maxAlternatives = 1;
         
+        // Better settings for capturing natural speech
+        recognitionRef.current.continuous = true; // Keep listening continuously
+        recognitionRef.current.interimResults = true; // Get real-time results
+        recognitionRef.current.maxAlternatives = 3; // Get multiple alternatives for better accuracy
+        
+        // Add pause detection
+        let pauseTimeout: NodeJS.Timeout | null = null;
+        let lastSpeechTime = Date.now();
+        
         recognitionRef.current.onresult = (event: any) => {
           let finalTranscript = '';
           let interimTranscript = '';
+          
+          // Update last speech time
+          lastSpeechTime = Date.now();
           
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcript = event.results[i][0].transcript;
@@ -148,7 +177,7 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
             }
           }
           
-          // Clean up the transcriptions to reduce repetition and noise
+          // Clean up the transcriptions while preserving filler words
           if (interimTranscript) {
             const cleanedInterim = cleanTranscription(interimTranscript);
             setCurrentAnswer(prev => {
@@ -164,6 +193,23 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
               return baseAnswer + ' ' + cleanedFinal;
             });
           }
+          
+          // Clear any existing pause timeout
+          if (pauseTimeout) {
+            clearTimeout(pauseTimeout);
+          }
+          
+          // Set pause detection (2 seconds of silence = pause)
+          pauseTimeout = setTimeout(() => {
+            if (Date.now() - lastSpeechTime > 2000) {
+              setCurrentAnswer(prev => {
+                if (prev && !prev.endsWith(' -- ')) {
+                  return prev + ' -- ';
+                }
+                return prev;
+              });
+            }
+          }, 2000);
         };
 
         recognitionRef.current.onerror = (event: any) => {
@@ -201,6 +247,13 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
   const speakText = async (text: string): Promise<void> => {
     return new Promise((resolve, reject) => {
       try {
+        // Don't speak if user is actively answering
+        if (interviewState.phase === 'listening' && currentAnswer.trim()) {
+          console.log('User is answering, skipping AI speech');
+          resolve();
+          return;
+        }
+        
         setInterviewState(prev => ({ ...prev, isSpeaking: true }));
         
         if (interviewState.isListening) {
@@ -308,6 +361,7 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
 
   const submitAnswer = useCallback(() => {
     if (currentAnswer.trim()) {
+      console.log('Manual answer submission triggered');
       setInterviewState(prev => ({ ...prev, isProcessing: true }));
       
       const newEntry: ConversationEntry = {
@@ -321,13 +375,22 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
       stopListening();
       setCurrentAnswer('');
       
+      // Only proceed to next question after manual submission
       setTimeout(() => {
         moveToNextQuestion();
       }, 1000);
+    } else {
+      console.log('Cannot submit empty answer');
     }
   }, [currentAnswer, interviewState.currentQuestionIndex, stopListening]);
 
   const moveToNextQuestion = useCallback(async () => {
+    // Safety check: don't proceed if user is still answering
+    if (interviewState.phase === 'listening' && currentAnswer.trim()) {
+      console.log('User is still answering, cannot proceed to next question');
+      return;
+    }
+    
     if (interviewState.currentQuestionIndex < questions.length - 1) {
       const nextIndex = interviewState.currentQuestionIndex + 1;
       setInterviewState(prev => ({ 
@@ -352,14 +415,14 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
     } else {
       endInterview();
     }
-  }, [interviewState.currentQuestionIndex, questions, speakText, startListening]);
+  }, [interviewState.currentQuestionIndex, questions, speakText, startListening, interviewState.phase, currentAnswer]);
 
   const startInterview = useCallback(async () => {
     setInterviewState(prev => ({ ...prev, phase: 'welcome' }));
     setConversation([]);
     setError(null);
     
-    const welcomeMessage = `Hello ${firstName}! Welcome to your interview. I'll be asking you ${questions.length} questions. Please answer each one as thoroughly as you can. When you're done answering, press the "Submit Answer" button to continue. Let's begin with the first question.`;
+    const welcomeMessage = `Hello ${firstName}! Welcome to your interview. I'll be asking you ${questions.length} questions. Please answer each one as thoroughly as you can. When you're done answering, press Enter or click the "Press Enter When Finished Answering" button to continue. The interview will not proceed until you manually submit your answer. Let's begin with the first question.`;
     
     const welcomeEntry: ConversationEntry = {
       role: 'interviewer',
@@ -429,10 +492,24 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
     }
   }, [interviewState.phase, stopListening, moveToNextQuestion]);
 
+  // Add pause manually
+  const addPause = useCallback(() => {
+    if (interviewState.phase === 'listening') {
+      setCurrentAnswer(prev => {
+        if (prev && !prev.endsWith(' -- ')) {
+          return prev + ' -- ';
+        }
+        return prev;
+      });
+    }
+  }, [interviewState.phase]);
+
+
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      if (event.key === 'Enter' && !event.ctrlKey && !event.metaKey) {
         event.preventDefault();
         if (interviewState.phase === 'listening' && currentAnswer.trim()) {
           submitAnswer();
@@ -441,12 +518,18 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
         if (interviewState.phase === 'listening') {
           skipQuestion();
         }
+      } else if (event.key === ' ' && event.ctrlKey) {
+        // Ctrl+Space to add pause
+        event.preventDefault();
+        if (interviewState.phase === 'listening') {
+          addPause();
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [interviewState.phase, currentAnswer, submitAnswer, skipQuestion]);
+  }, [interviewState.phase, currentAnswer, submitAnswer, skipQuestion, addPause]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -460,6 +543,8 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
       stopListening();
     };
   }, [stopListening]);
+
+
 
   const getPhaseMessage = () => {
     switch (interviewState.phase) {
@@ -653,35 +738,81 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
                   <div className="mt-2 text-sm text-green-400">
                     ✓ Continuously listening - speak as much as you need
                   </div>
+                  <div className="mt-2 text-sm text-yellow-400 font-semibold">
+                    ⚠️ Press Enter or click the button above when you're finished answering
+                  </div>
+                  <div className="mt-2 text-sm text-blue-400">
+                    💡 You can continue speaking to add more to your answer
+                  </div>
+                  <div className="mt-2 text-sm text-purple-400 font-semibold">
+                    🎯 Filler words (um, ahh, like) and pauses (--) are preserved for speech analysis
+                  </div>
+                </div>
+              )}
+              
+              {/* Instructions when no answer yet */}
+              {!currentAnswer && (
+                <div className="bg-blue-500/20 rounded-lg p-4 mb-4 text-center">
+                  <div className="text-blue-300 text-sm">
+                    🎤 Start speaking to answer the question. The system will continuously listen to your response.
+                  </div>
+                  <div className="text-purple-300 text-sm mt-2">
+                    ✨ Enhanced: Filler words (um, ahh, like) and natural pauses are preserved for realistic speech analysis and evaluation.
+                  </div>
                 </div>
               )}
               
               {/* Action Buttons */}
-              <div className="flex flex-wrap gap-3 justify-center">
+              <div className="flex flex-col gap-3 justify-center items-center">
+                {/* Primary Submit Button - Large and Prominent */}
                 <button
                   onClick={submitAnswer}
                   disabled={!currentAnswer.trim()}
-                  className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:text-gray-400 text-white rounded-lg transition-colors flex items-center space-x-2"
+                  className="px-8 py-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:text-gray-400 text-white rounded-lg transition-all duration-200 flex items-center space-x-3 text-lg font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:scale-100"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span>Submit Answer</span>
+                  <span>✅ Press Enter When Finished Answering</span>
                 </button>
-                <button
-                  onClick={skipQuestion}
-                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center space-x-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  <span>Skip Question</span>
-                </button>
+                
+                {/* Secondary Actions */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={skipQuestion}
+                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center space-x-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span>Next Question</span>
+                  </button>
+                  
+                  <button
+                    onClick={addPause}
+                    className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center space-x-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Add Pause (--)</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setCurrentAnswer('')}
+                    className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors flex items-center space-x-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span>Clear Answer</span>
+                  </button>
+                </div>
               </div>
               
               {/* Keyboard Shortcuts */}
               <div className="mt-4 text-xs text-gray-400">
-                <p>💡 Tip: Press Ctrl+Enter to submit, Esc to skip</p>
+                <p>💡 Tip: Press Enter to submit answer, Esc to skip question, Ctrl+Space to add pause (--)</p>
               </div>
             </div>
           </div>

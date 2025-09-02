@@ -10,7 +10,7 @@
     <img src="https://img.shields.io/badge/-Tailwind_CSS-black?style=for-the-badge&logoColor=white&logo=tailwindcss&color=06B6D4" alt="Tailwind CSS" />
     <img src="https://img.shields.io/badge/-Python-black?style=for-the-badge&logoColor=white&logo=python&color=3776AB" alt="Python" />
     <img src="https://img.shields.io/badge/-ElevenLabs-black?style=for-the-badge&logoColor=white&logo=elevenlabs&color=000000" alt="ElevenLabs" />
-  </div>
+    </div>
 </div>
 
 ## 📋 Table of Contents
@@ -118,9 +118,9 @@ Prepora/
    ```
 
 2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+```
 
 3. **Set up Python environment**
    ```bash
@@ -138,9 +138,9 @@ Prepora/
    ```
 
 5. **Run the development server**
-   ```bash
-   npm run dev
-   ```
+```bash
+npm run dev
+```
 
 6. **Open your browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
@@ -302,4 +302,4 @@ If you encounter any issues or have questions:
 <div align="center">
   <p><strong>Built with ❤️ for better interview preparation</strong></p>
   <p>Star this repository if it helped you!</p>
-</div> 
+      </div>
