@@ -23,33 +23,166 @@ def clean_question_text(question):
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned
 
-def map_techstack_to_category(techstack):
-    """Map tech stack to question categories"""
+def map_techstack_to_category(techstack, role=None):
+    """Map tech stack to question categories based on available dataset categories"""
     techstack_lower = techstack.lower()
     
+    # Role-specific priority mapping
+    if role and 'machine learning' in role.lower():
+        if 'python' in techstack_lower or 'machine learning' in techstack_lower or 'deep learning' in techstack_lower:
+            return 'Machine Learning'
+    
+    if role and 'data scientist' in role.lower():
+        if 'python' in techstack_lower or 'machine learning' in techstack_lower or 'data analysis' in techstack_lower:
+            return 'Machine Learning'
+    
+    if role and 'data engineer' in role.lower():
+        if 'python' in techstack_lower or 'data' in techstack_lower or 'apache spark' in techstack_lower:
+            return 'Data Engineering'
+    
+    if role and 'devops' in role.lower():
+        if 'docker' in techstack_lower or 'kubernetes' in techstack_lower or 'aws' in techstack_lower:
+            return 'DevOps'
+    
+    if role and 'security' in role.lower():
+        if 'security' in techstack_lower or 'oauth' in techstack_lower or 'jwt' in techstack_lower:
+            return 'Security'
+    
+    if role and 'qa' in role.lower() or 'testing' in role.lower():
+        if 'testing' in techstack_lower or 'jest' in techstack_lower or 'cypress' in techstack_lower:
+            return 'Software Testing'
+    
+    if role and 'database' in role.lower():
+        if 'sql' in techstack_lower or 'mysql' in techstack_lower or 'postgresql' in techstack_lower:
+            return 'Database and SQL'
+    
     category_mapping = {
-        'javascript': 'Languages and Frameworks',
-        'js': 'Languages and Frameworks',
+        # Frontend technologies
+        'javascript': 'Front-end',
+        'js': 'Front-end',
+        'react': 'Front-end',
+        'vue': 'Front-end',
+        'angular': 'Front-end',
+        'html': 'Front-end',
+        'css': 'Front-end',
+        'typescript': 'Front-end',
+        'ts': 'Front-end',
+        'jquery': 'Front-end',
+        'bootstrap': 'Front-end',
+        'tailwind': 'Front-end',
+        'sass': 'Front-end',
+        'scss': 'Front-end',
+        
+        # Backend technologies
+        'node': 'Back-end',
+        'express': 'Back-end',
         'python': 'Languages and Frameworks',
-        'java': 'Languages and Frameworks',
-        'react': 'Frontend Development',
-        'vue': 'Frontend Development',
-        'angular': 'Frontend Development',
-        'node': 'Backend Development',
-        'express': 'Backend Development',
-        'django': 'Backend Development',
-        'flask': 'Backend Development',
+        'django': 'Back-end',
+        'flask': 'Back-end',
+        'fastapi': 'Back-end',
+        'java': 'Back-end',
+        'spring': 'Back-end',
+        'php': 'Back-end',
+        'laravel': 'Back-end',
+        'ruby': 'Back-end',
+        'rails': 'Back-end',
+        'go': 'Back-end',
+        'rust': 'Back-end',
+        'c#': 'Back-end',
+        '.net': 'Back-end',
+        
+        # Database technologies
         'sql': 'Database and SQL',
         'mysql': 'Database and SQL',
         'postgresql': 'Database and SQL',
         'mongodb': 'Database and SQL',
+        'redis': 'Database and SQL',
+        'sqlite': 'Database and SQL',
+        
+        # DevOps technologies
+        'docker': 'DevOps',
+        'kubernetes': 'DevOps',
+        'aws': 'DevOps',
+        'azure': 'DevOps',
+        'gcp': 'DevOps',
+        'jenkins': 'DevOps',
+        'git': 'Version Control',
+        'github': 'Version Control',
+        'gitlab': 'Version Control',
+        
+        # Data structures and algorithms
         'data': 'Data Structures',
-        'algorithm': 'Data Structures',
+        'algorithm': 'Algorithms',
         'dsa': 'Data Structures',
-        'html': 'Frontend Development',
-        'css': 'Frontend Development',
-        'typescript': 'Languages and Frameworks',
-        'ts': 'Languages and Frameworks'
+        'algorithms': 'Algorithms',
+        'machine learning': 'Machine Learning',
+        'deep learning': 'Machine Learning',
+        'tensorflow': 'Machine Learning',
+        'pytorch': 'Machine Learning',
+        'scikit-learn': 'Machine Learning',
+        'data analysis': 'Data Engineering',
+        'statistics': 'Data Engineering',
+        'jupyter': 'Data Engineering',
+        'apache spark': 'Data Engineering',
+        'react native': 'Front-end',
+        'flutter': 'Front-end',
+        'swift': 'Front-end',
+        'kotlin': 'Front-end',
+        'ios': 'Front-end',
+        'android': 'Front-end',
+        'figma': 'Front-end',
+        'sketch': 'Front-end',
+        'adobe xd': 'Front-end',
+        'prototyping': 'Front-end',
+        'user research': 'Front-end',
+        'wireframing': 'Front-end',
+        'design systems': 'Front-end',
+        'agile': 'Software Testing',
+        'scrum': 'Software Testing',
+        'team management': 'Software Testing',
+        'project management': 'Software Testing',
+        'api testing': 'Software Testing',
+        'automation': 'Software Testing',
+        'manual testing': 'Software Testing',
+        'linux': 'DevOps',
+        'windows': 'DevOps',
+        'shell scripting': 'DevOps',
+        'ci/cd': 'DevOps',
+        'terraform': 'DevOps',
+        'infrastructure as code': 'DevOps',
+        'networking': 'Networking',
+        'network security': 'Security',
+        'application security': 'Security',
+        'penetration testing': 'Security',
+        'oracle': 'Database and SQL',
+        'database design': 'Database and SQL',
+        'performance tuning': 'Database and SQL',
+        'backup and recovery': 'Database and SQL',
+        'analytics': 'Data Engineering',
+        
+        # Security
+        'security': 'Security',
+        'oauth': 'Security',
+        'jwt': 'Security',
+        
+        # Testing
+        'testing': 'Software Testing',
+        'jest': 'Software Testing',
+        'cypress': 'Software Testing',
+        'selenium': 'Software Testing',
+        
+        # System Design
+        'system': 'System Design',
+        'architecture': 'System Design',
+        'microservices': 'System Design',
+        'api': 'System Design',
+        
+        # Web Development (general)
+        'web': 'Web Development',
+        'http': 'Web Development',
+        'https': 'Web Development',
+        'rest': 'Web Development',
+        'api': 'Web Development'
     }
     
     # Find matching category
@@ -85,7 +218,7 @@ def generate_questions(role, level, techstack, type_focus, amount):
         recommender.load_model(model_path)
         
         # Map inputs to ML model parameters
-        category = map_techstack_to_category(techstack)
+        category = map_techstack_to_category(techstack, role)
         difficulty = map_level_to_difficulty(level)
         
         # Get all available categories and difficulties for better variety
@@ -118,10 +251,39 @@ def generate_questions(role, level, techstack, type_focus, amount):
                         if len(questions) >= amount:
                             break
         
-        # Strategy 3: If still not enough, get questions from different categories but same difficulty
+        # Strategy 3: If still not enough, prioritize related categories based on tech stack
+        if len(questions) < amount:
+            # Define related categories for better fallback
+            related_categories = {
+                'Languages and Frameworks': ['General Programming', 'Back-end', 'Front-end'],
+                'Back-end': ['Languages and Frameworks', 'Database and SQL', 'System Design'],
+                'Front-end': ['Languages and Frameworks', 'Web Development', 'General Programming'],
+                'Database and SQL': ['Back-end', 'System Design', 'General Programming'],
+                'DevOps': ['System Design', 'Back-end', 'Security'],
+                'Machine Learning': ['Data Engineering', 'Algorithms', 'General Programming'],
+                'Data Engineering': ['Machine Learning', 'Database and SQL', 'Algorithms'],
+                'Security': ['System Design', 'Back-end', 'General Programming'],
+                'Software Testing': ['General Programming', 'Back-end', 'Front-end'],
+                'System Design': ['Back-end', 'DevOps', 'Security']
+            }
+            
+            # Try related categories first
+            if category in related_categories:
+                for related_cat in related_categories[category]:
+                    if len(questions) >= amount:
+                        break
+                    more_questions = recommender.get_questions_by_filters(
+                        category=related_cat,
+                        difficulty=difficulty,
+                        limit=amount - len(questions)
+                    )
+                    if len(more_questions) > 0:
+                        questions.extend(more_questions['Question'].tolist())
+        
+        # Strategy 4: If still not enough, get questions from different categories but same difficulty
         if len(questions) < amount and difficulty:
             for cat in all_categories:
-                if cat != category:
+                if cat != category and cat not in (related_categories.get(category, []) if category in related_categories else []):
                     more_questions = recommender.get_questions_by_filters(
                         category=cat,
                         difficulty=difficulty,
@@ -132,7 +294,7 @@ def generate_questions(role, level, techstack, type_focus, amount):
                         if len(questions) >= amount:
                             break
         
-        # Strategy 4: If still not enough, get random questions from any category/difficulty
+        # Strategy 5: If still not enough, get random questions from any category/difficulty
         if len(questions) < amount:
             all_questions = recommender.get_questions_by_filters(limit=amount * 3)
             if len(all_questions) > 0:

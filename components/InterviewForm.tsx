@@ -33,16 +33,97 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
     "Technical Lead", "Engineering Manager", "Solution Architect", "Other"
   ];
 
-  // Tech stack options
-  const techStacks = [
-    "JavaScript", "TypeScript", "React", "Vue.js", "Angular", "Node.js", "Express.js",
-    "Python", "Django", "Flask", "FastAPI", "Java", "Spring Boot", "C#", ".NET",
-    "Go", "Rust", "PHP", "Laravel", "Ruby", "Rails", "Swift", "Kotlin",
-    "HTML/CSS", "SASS/SCSS", "Tailwind CSS", "Bootstrap", "Material-UI",
-    "MongoDB", "PostgreSQL", "MySQL", "Redis", "Elasticsearch", "Firebase",
-    "AWS", "Azure", "Google Cloud", "Docker", "Kubernetes", "Jenkins",
-    "Git", "GitHub", "GitLab", "Jira", "Confluence", "Figma", "Sketch"
-  ];
+  // Role-specific tech stack mappings
+  const roleTechStacks = {
+    "Frontend Developer": [
+      "JavaScript", "TypeScript", "React", "Vue.js", "Angular", "HTML", "CSS", 
+      "jQuery", "Bootstrap", "Tailwind CSS", "SASS", "SCSS", "Web Development"
+    ],
+    "Backend Developer": [
+      "Node.js", "Express.js", "Python", "Django", "Flask", "FastAPI", "Java", 
+      "Spring Boot", "PHP", "Laravel", "Ruby", "Rails", "Go", "Rust", "C#", ".NET",
+      "SQL", "MySQL", "PostgreSQL", "MongoDB", "Redis", "SQLite", "API", "REST"
+    ],
+    "Full Stack Developer": [
+      "JavaScript", "TypeScript", "React", "Vue.js", "Angular", "HTML", "CSS",
+      "Node.js", "Express.js", "Python", "Django", "Flask", "FastAPI", "Java",
+      "SQL", "MySQL", "PostgreSQL", "MongoDB", "Redis", "SQLite", "API", "REST"
+    ],
+    "DevOps Engineer": [
+      "Docker", "Kubernetes", "AWS", "Azure", "Google Cloud", "Jenkins",
+      "Git", "GitHub", "GitLab", "Python", "Shell Scripting", "CI/CD"
+    ],
+    "Data Scientist": [
+      "Python", "R", "SQL", "MySQL", "PostgreSQL", "MongoDB", "Redis",
+      "Machine Learning", "Data Analysis", "Statistics", "Jupyter"
+    ],
+    "Data Engineer": [
+      "Python", "SQL", "MySQL", "PostgreSQL", "MongoDB", "Redis", "SQLite",
+      "Docker", "Kubernetes", "AWS", "Azure", "Google Cloud", "Apache Spark"
+    ],
+    "Machine Learning Engineer": [
+      "Python", "R", "SQL", "MySQL", "PostgreSQL", "MongoDB", "Redis",
+      "Machine Learning", "Deep Learning", "TensorFlow", "PyTorch", "Scikit-learn"
+    ],
+    "Software Engineer": [
+      "JavaScript", "TypeScript", "Python", "Java", "C#", ".NET", "Go", "Rust",
+      "SQL", "MySQL", "PostgreSQL", "MongoDB", "Redis", "Git", "GitHub", "GitLab"
+    ],
+    "Mobile Developer": [
+      "JavaScript", "TypeScript", "React Native", "Flutter", "Swift", "Kotlin",
+      "Java", "iOS", "Android", "API", "REST"
+    ],
+    "UI/UX Designer": [
+      "HTML", "CSS", "JavaScript", "Figma", "Sketch", "Adobe XD", "Prototyping",
+      "User Research", "Wireframing", "Design Systems"
+    ],
+    "Product Manager": [
+      "API", "REST", "System Design", "Architecture", "Agile", "Scrum",
+      "User Research", "Analytics", "Data Analysis"
+    ],
+    "QA Engineer": [
+      "Testing", "Jest", "Cypress", "Selenium", "Python", "JavaScript", "Java",
+      "API Testing", "Automation", "Manual Testing"
+    ],
+    "System Administrator": [
+      "Linux", "Windows", "Docker", "Kubernetes", "AWS", "Azure", "Google Cloud",
+      "Git", "GitHub", "GitLab", "Shell Scripting", "Networking"
+    ],
+    "Cloud Engineer": [
+      "AWS", "Azure", "Google Cloud", "Docker", "Kubernetes", "Terraform",
+      "Python", "Shell Scripting", "CI/CD", "Infrastructure as Code"
+    ],
+    "Security Engineer": [
+      "Security", "OAuth", "JWT", "Python", "JavaScript", "Java", "C#",
+      "Network Security", "Application Security", "Penetration Testing"
+    ],
+    "Database Administrator": [
+      "SQL", "MySQL", "PostgreSQL", "MongoDB", "Redis", "SQLite", "Oracle",
+      "Database Design", "Performance Tuning", "Backup and Recovery"
+    ],
+    "Technical Lead": [
+      "System Design", "Architecture", "Microservices", "API", "REST",
+      "Python", "Java", "JavaScript", "TypeScript", "Git", "GitHub", "GitLab"
+    ],
+    "Engineering Manager": [
+      "System Design", "Architecture", "Microservices", "API", "REST",
+      "Agile", "Scrum", "Team Management", "Project Management"
+    ],
+    "Solution Architect": [
+      "System Design", "Architecture", "Microservices", "API", "REST",
+      "AWS", "Azure", "Google Cloud", "Docker", "Kubernetes", "Python", "Java"
+    ],
+    "Other": [
+      "JavaScript", "TypeScript", "Python", "Java", "C#", ".NET", "Go", "Rust",
+      "SQL", "MySQL", "PostgreSQL", "MongoDB", "Redis", "Git", "GitHub", "GitLab",
+      "Docker", "Kubernetes", "AWS", "Azure", "Google Cloud"
+    ]
+  };
+
+  // Get tech stacks based on selected role
+  const getTechStacksForRole = (role: string) => {
+    return roleTechStacks[role as keyof typeof roleTechStacks] || roleTechStacks["Other"];
+  };
 
   // Interview type options
   const interviewTypes = [
@@ -111,7 +192,9 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: value,
+      // Clear tech stack when role changes
+      ...(field === "role" && { techstack: "" })
     }));
   };
 
@@ -128,7 +211,7 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
   };
 
   const handleTechStackToggle = (tech: string) => {
-    const currentTechs = formData.techstack.split(",").filter(t => t.trim());
+    const currentTechs = formData.techstack ? formData.techstack.split(",").filter(t => t.trim()) : [];
     if (currentTechs.includes(tech)) {
       const newTechs = currentTechs.filter(t => t !== tech);
       setFormData(prev => ({ ...prev, techstack: newTechs.join(", ") }));
@@ -311,8 +394,8 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
             
             <div className="bg-dark-300/30 rounded-2xl p-6 border border-gray-600/30">
               <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-h-80 overflow-y-auto custom-scrollbar">
-                {techStacks.map((tech, index) => {
-                  const isSelected = formData.techstack.split(",").includes(tech);
+                {getTechStacksForRole(formData.role).map((tech, index) => {
+                  const isSelected = formData.techstack ? formData.techstack.split(",").includes(tech) : false;
                   return (
                     <button
                       key={tech}
@@ -348,11 +431,11 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
                   <h4 className="text-lg font-semibold text-white">Selected Technologies</h4>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  {formData.techstack.split(",").filter(t => t.trim()).map((tech) => (
+                  {formData.techstack ? formData.techstack.split(",").filter(t => t.trim()).map((tech) => (
                     <span key={tech} className="px-4 py-2 bg-primary-500/20 text-primary-300 rounded-xl text-sm font-medium border border-primary-500/30">
                       {tech}
                     </span>
-                  ))}
+                  )) : null}
                 </div>
               </div>
             )}
