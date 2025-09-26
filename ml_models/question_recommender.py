@@ -37,11 +37,11 @@ class SimpleQuestionRecommender:
     def load_and_preprocess_questions(self, questions_path: str) -> bool:
         """Load and preprocess questions dataset"""
         try:
-            print("📚 Loading and preprocessing questions...")
+            print("Loading and preprocessing questions...")
             
             # Load questions
             self.questions_df = pd.read_csv(questions_path, encoding='latin-1')
-            print(f"✅ Loaded {len(self.questions_df)} questions")
+            print(f"Loaded {len(self.questions_df)} questions")
             
             # Clean and validate data
             self.questions_df = self.questions_df.dropna(subset=['Question', 'Answer', 'Category', 'Difficulty'])
@@ -58,14 +58,14 @@ class SimpleQuestionRecommender:
                 self.questions_df['cleaned_answer']
             )
             
-            print(f"✅ Preprocessed {len(self.questions_df)} questions")
-            print(f"📊 Categories: {list(self.questions_df['Category'].unique())}")
-            print(f"📊 Difficulties: {list(self.questions_df['Difficulty'].unique())}")
+            print(f"Preprocessed {len(self.questions_df)} questions")
+            print(f"Categories: {list(self.questions_df['Category'].unique())}")
+            print(f"Difficulties: {list(self.questions_df['Difficulty'].unique())}")
             
             return True
             
         except Exception as e:
-            print(f"❌ Error loading questions: {e}")
+            print(f"Error loading questions: {e}")
             return False
     
     def _simple_text_cleaning(self, text: str) -> str:
@@ -86,7 +86,7 @@ class SimpleQuestionRecommender:
     
     def train_tfidf_model(self):
         """Train simple TF-IDF vectorization model"""
-        print("🔤 Training Simple TF-IDF Model...")
+        print("Training Simple TF-IDF Model...")
         
         # Basic TF-IDF with simple parameters
         self.tfidf_vectorizer = TfidfVectorizer(
@@ -102,7 +102,7 @@ class SimpleQuestionRecommender:
             self.questions_df['combined_text']
         )
         
-        print(f"✅ TF-IDF trained with {self.question_vectors.shape[1]} features")
+        print(f"TF-IDF trained with {self.question_vectors.shape[1]} features")
     
     def get_questions_by_filters(self, category=None, difficulty=None, limit=10):
         """Get questions filtered by various criteria"""
@@ -211,7 +211,7 @@ class SimpleQuestionRecommender:
         with open(file_path, 'wb') as f:
             pickle.dump(model_state, f)
         
-        print(f"💾 Saved question recommender to {file_path}")
+        print(f"Saved question recommender to {file_path}")
     
     def load_model(self, file_path: str):
         """Load trained models using pickle"""

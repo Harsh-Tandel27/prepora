@@ -30,37 +30,37 @@ class SimpleMLPipelineTrainer:
         self.models_dir = Path("trained_models")
         self.models_dir.mkdir(exist_ok=True)
         
-        print("🚀 Simple ML Pipeline Trainer Initialized")
+        print("Simple ML Pipeline Trainer Initialized")
     
     def train_all_models(self):
         """Train all ML models in sequence"""
         print("\n" + "="*60)
-        print("🎯 TRAINING SIMPLE ML PIPELINE")
+        print("TRAINING SIMPLE ML PIPELINE")
         print("="*60)
         
         try:
             # Step 1: Data Preprocessing
-            print("\n📊 Step 1: Data Preprocessing")
+            print("\nStep 1: Data Preprocessing")
             print("-" * 40)
             self._train_data_preprocessor()
             
             # Step 2: Interview Prediction Models
-            print("\n🎯 Step 2: Interview Prediction Models")
+            print("\nStep 2: Interview Prediction Models")
             print("-" * 40)
             self._train_interview_predictor()
             
             # Step 3: Question Recommendation System
-            print("\n❓ Step 3: Question Recommendation System")
+            print("\nStep 3: Question Recommendation System")
             print("-" * 40)
             self._train_question_recommender()
             
             # Step 4: Speech Analyzer
-            print("\n🗣️  Step 4: Speech Analyzer")
+            print("\nStep 4: Speech Analyzer")
             print("-" * 40)
             self._train_speech_analyzer()
             
             print("\n" + "="*60)
-            print("✅ ALL MODELS TRAINED SUCCESSFULLY!")
+            print("ALL MODELS TRAINED SUCCESSFULLY!")
             print("="*60)
             
             # Save all models
@@ -72,56 +72,56 @@ class SimpleMLPipelineTrainer:
     
     def _train_data_preprocessor(self):
         """Train data preprocessor"""
-        print("🔄 Training Data Preprocessor...")
+        print("Training Data Preprocessor...")
         
         # Load and preprocess base data
         base_data_path = "../dataset/Data - Base.csv"
         if os.path.exists(base_data_path):
-            print(f"📂 Loading base data from {base_data_path}")
+            print(f"Loading base data from {base_data_path}")
             self.data_preprocessor.base_data = self.data_preprocessor.load_and_preprocess_base_data(base_data_path)
-            print("✅ Base data preprocessing completed")
+            print("Base data preprocessing completed")
         else:
-            print(f"⚠️  Base data file not found: {base_data_path}")
+            print(f"Base data file not found: {base_data_path}")
         
         # Load and preprocess questions data
         questions_data_path = "../dataset/Software Questions.csv"
         if os.path.exists(questions_data_path):
-            print(f"📂 Loading questions data from {questions_data_path}")
+            print(f"Loading questions data from {questions_data_path}")
             self.data_preprocessor.questions_data = self.data_preprocessor.load_and_preprocess_questions_data(questions_data_path)
-            print("✅ Questions data preprocessing completed")
+            print("Questions data preprocessing completed")
         else:
-            print(f"⚠️  Questions data file not found: {questions_data_path}")
+            print(f"Questions data file not found: {questions_data_path}")
     
     def _train_interview_predictor(self):
         """Train interview prediction models"""
-        print("🎯 Training Interview Prediction Models...")
+        print("Training Interview Prediction Models...")
         
         # Get preprocessed data
         if hasattr(self.data_preprocessor, 'base_data') and self.data_preprocessor.base_data is not None:
             X, y = self.data_preprocessor.prepare_ml_data(self.data_preprocessor.base_data)
             
             if X is not None and y is not None:
-                print(f"📊 Training with {X.shape[0]} samples and {X.shape[1]} features")
-                print(f"🎯 Target distribution: {y.value_counts().to_dict()}")
+                print(f"Training with {X.shape[0]} samples and {X.shape[1]} features")
+                print(f"Target distribution: {y.value_counts().to_dict()}")
                 
                 # Train models
                 results = self.interview_predictor.train_models(X, y)
                 
-                print(f"🏆 Best model: {self.interview_predictor.best_model_name}")
-                print(f"📈 Model performance: {results}")
+                print(f"Best model: {self.interview_predictor.best_model_name}")
+                print(f"Model performance: {results}")
             else:
-                print("⚠️  Failed to prepare ML data")
+                print("Failed to prepare ML data")
         else:
-            print("⚠️  No base data available for interview prediction")
+            print("No base data available for interview prediction")
     
     def _train_question_recommender(self):
         """Train question recommendation system"""
-        print("❓ Training Question Recommendation System...")
+        print("Training Question Recommendation System...")
         
         # Get preprocessed questions
         if hasattr(self.data_preprocessor, 'questions_data') and self.data_preprocessor.questions_data is not None:
             questions_df = self.data_preprocessor.questions_data
-            print(f"📚 Training with {len(questions_df)} questions")
+            print(f"Training with {len(questions_df)} questions")
             
             # Save questions to temporary file for the recommender to load
             temp_questions_path = "temp_questions.csv"
@@ -133,25 +133,25 @@ class SimpleMLPipelineTrainer:
             if success:
                 # Train TF-IDF model
                 self.question_recommender.train_tfidf_model()
-                print("✅ Question recommendation system trained")
+                print("Question recommendation system trained")
                 
                 # Clean up temporary file
                 os.remove(temp_questions_path)
             else:
-                print("⚠️  Failed to load questions into recommender")
+                print("Failed to load questions into recommender")
         else:
-            print("⚠️  No questions data available for training")
+            print("No questions data available for training")
     
     def _train_speech_analyzer(self):
         """Train speech analyzer"""
-        print("🗣️  Training Speech Analyzer...")
+        print("Training Speech Analyzer...")
         
         # Speech analyzer doesn't need training data, just initialization
-        print("✅ Speech analyzer initialized and ready")
+        print("Speech analyzer initialized and ready")
     
     def _save_all_models(self):
         """Save all trained models"""
-        print("\n💾 Saving All Models...")
+        print("\nSaving All Models...")
         print("-" * 40)
         
         # Save data preprocessor
@@ -170,10 +170,10 @@ class SimpleMLPipelineTrainer:
         analyzer_path = self.models_dir / "speech_analyzer.pkl"
         self.speech_analyzer.save_model(str(analyzer_path))
         
-        print("✅ All models saved successfully!")
+        print("All models saved successfully!")
         
         # Print model locations
-        print("\n📁 Model Locations:")
+        print("\nModel Locations:")
         print(f"   Data Preprocessor: {preprocessor_path}")
         print(f"   Interview Predictor: {predictor_path}")
         print(f"   Question Recommender: {recommender_path}")
@@ -205,7 +205,7 @@ class SimpleMLPipelineTrainer:
 
 def main():
     """Main training function"""
-    print("🚀 Starting Simple ML Pipeline Training...")
+    print("Starting Simple ML Pipeline Training...")
     
     # Initialize trainer
     trainer = SimpleMLPipelineTrainer()
@@ -214,17 +214,17 @@ def main():
     trainer.train_all_models()
     
     # Print summary
-    print("\n📊 Training Summary:")
+    print("\nTraining Summary:")
     print("-" * 40)
     summary = trainer.get_training_summary()
     
     for component, details in summary.items():
-        print(f"\n🔧 {component.replace('_', ' ').title()}:")
+        print(f"\n{component.replace('_', ' ').title()}:")
         for key, value in details.items():
             print(f"   {key}: {value}")
     
-    print("\n🎉 Training completed successfully!")
-    print("📁 Models saved in 'trained_models' directory")
+    print("\nTraining completed successfully!")
+    print("Models saved in 'trained_models' directory")
 
 if __name__ == "__main__":
     main()

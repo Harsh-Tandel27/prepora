@@ -235,7 +235,7 @@ class SimpleSpeechAnalyzer:
         with open(file_path, 'wb') as f:
             pickle.dump(analyzer_state, f)
         
-        print(f"💾 Saved speech analyzer to {file_path}")
+        print(f"Saved speech analyzer to {file_path}")
     
     def load_model(self, file_path: str):
         """Load speech analyzer state using pickle"""
@@ -246,7 +246,7 @@ class SimpleSpeechAnalyzer:
         self.thresholds = analyzer_state['thresholds']
         self.analysis_results = analyzer_state['analysis_results']
         
-        print(f"📂 Loaded speech analyzer from {file_path}")
+        print(f"Loaded speech analyzer from {file_path}")
     
     def get_analysis_summary(self) -> Dict[str, Any]:
         """Get summary of speech analysis capabilities"""
