@@ -33,6 +33,30 @@ Like, yeah, that’s basically it.`;
   const [requestPayload, setRequestPayload] = useState<any>(null);
   const [responseStatus, setResponseStatus] = useState<string | null>(null);
 
+  // Additional realistic presets for quick comparative testing
+  const presets: { name: string; text: string }[] = [
+    {
+      name: "Excellent (Structured, Technical)",
+      text: `I start by clarifying requirements and constraints, then propose a baseline design with clear trade-offs. For scaling, I'd add read replicas, caching layers (Redis), and queues for background jobs. I'd also add tracing (OpenTelemetry) to identify bottlenecks and apply indexing or query optimizations where needed. For an array problem, I'd pick the optimal data structure first; for example, use a sliding window or hash map to get O(n). I communicate my approach, validate with examples, and iterate. I document decisions and add tests to guard regressions.`,
+    },
+    {
+      name: "Good (Solid but brief)",
+      text: `Typically I outline the approach, consider edge cases, and then code a simple version before optimizing. I've improved API latency by adding caching and database indexes. I collaborate with stakeholders and communicate trade-offs, like consistency versus latency. For algorithms, I choose data structures to minimize complexity, and I test with small cases.`,
+    },
+    {
+      name: "Average (Some gaps)",
+      text: `I usually try a solution and refine it if it's slow. For performance issues, I would try increasing resources and maybe add a cache. I explain the solution but sometimes skip writing tests due to time. I can improve at measuring impact and planning optimizations systematically.`,
+    },
+    {
+      name: "Rambling (Filler-heavy)",
+      text: `Um, like, I basically start coding and then, you know, if it doesn't work, I try something else. I mean, performance is important, but, like, I think we can just, you know, add more servers. For communication, I usually just say what I did. So, yeah, that's kind of my approach.`,
+    },
+    {
+      name: "Very Short (Insufficient detail)",
+      text: `I solve problems. I know React. I can code.`,
+    },
+  ];
+
   const runAnalysis = async () => {
     setLoading(true);
     setResult(null);
@@ -123,6 +147,17 @@ Like, yeah, that’s basically it.`;
         >
           Use Weak Responses
         </button>
+        {presets.map((p, i) => (
+          <button
+            key={i}
+            onClick={() => setTranscript(p.text)}
+            disabled={loading}
+            className="px-6 py-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold disabled:opacity-60"
+            title={p.text.slice(0, 120) + (p.text.length > 120 ? '…' : '')}
+          >
+            {p.name}
+          </button>
+        ))}
         <button
           onClick={runAnalysis}
           disabled={loading}

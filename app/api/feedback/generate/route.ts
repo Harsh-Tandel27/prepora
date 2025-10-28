@@ -269,13 +269,15 @@ function simpleSpeechAnalysis(text: string) {
   const lower = text.toLowerCase();
   const words = lower.split(/\s+/).filter(Boolean);
   const wordCount = words.length;
+  // Extra penalty for very short text (< 30 words)
+  const focusLengthPenalty = wordCount < 30 ? Math.min(25, (30 - wordCount) * 1.5) : 0;
   const fillerWords = ['um','uh','like','you know','actually','basically','literally'];
   const fillerCount = fillerWords.reduce((acc, fw) => acc + (lower.match(new RegExp(`\\b${fw.replace(/\s+/g, "\\s+")}\\b`, 'g'))?.length || 0), 0);
   const fillerRate = wordCount ? fillerCount / wordCount : 0;
   const uniqueWords = new Set(words).size;
   const vocabularyDiversity = wordCount ? uniqueWords / wordCount : 0;
   // Start from 75, penalize filler and reward diversity
-  let quality = 75 - Math.min(25, fillerRate * 200) + Math.min(15, vocabularyDiversity * 20);
+  let quality = 75 - Math.min(25, fillerRate * 200) + Math.min(15, vocabularyDiversity * 20) - focusLengthPenalty;
   quality = Math.max(40, Math.min(95, quality));
 
   return {

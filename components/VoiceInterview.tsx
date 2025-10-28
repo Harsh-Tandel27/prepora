@@ -50,6 +50,11 @@ export default function VoiceInterview({ questions, userName, onComplete, interv
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSpeechTimeRef = useRef<number>(Date.now());
   const lastPauseInsertTimeRef = useRef<number>(0);
+  
+  // State for STT/TTS provider tracking
+  const [sttProvider, setSttProvider] = useState<'deepgram' | 'web-speech'>('deepgram');
+  const [ttsProvider, setTtsProvider] = useState<'deepgram' | 'elevenlabs' | 'browser'>('deepgram');
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
   const firstName = userName.split(' ')[0];
 
