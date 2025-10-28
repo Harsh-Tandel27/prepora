@@ -64,8 +64,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
           return;
         }
 
-        toast.success("Account created successfully. Please sign in.");
-        router.push("/sign-in");
+        toast.success("Account created successfully!");
+        router.push("/onboarding");
       } else {
         const { email, password } = data;
 
@@ -81,13 +81,18 @@ const AuthForm = ({ type }: { type: FormType }) => {
           return;
         }
 
-        await signIn({
+        const result = await signIn({
           email,
           idToken,
         });
 
+        if (!result.success) {
+          toast.error(result.message);
+          return;
+        }
+
         toast.success("Signed in successfully.");
-        router.push("/");
+        router.push("/dashboard");
       }
     } catch (error) {
       console.log(error);
@@ -98,61 +103,99 @@ const AuthForm = ({ type }: { type: FormType }) => {
   const isSignIn = type === "sign-in";
 
   return (
-    <div className="card-border lg:min-w-[566px]">
-      <div className="flex flex-col gap-6 card py-14 px-10">
-        <div className="flex flex-row gap-2 justify-center">
-          <Image src="/logo.svg" alt="logo" height={32} width={38} />
-          <h2 className="text-primary-100">Prepora</h2>
+    <div className="relative">
+      {/* Glassmorphism Card */}
+      <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl shadow-2xl p-8 w-full">
+        {/* Logo and Brand */}
+        <div className="text-center mb-8">
+          <div className="flex flex-row gap-3 justify-center items-center mb-4">
+            <div className="relative">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Image src="/logo.svg" alt="logo" height={28} width={32} className="filter brightness-0 invert" />
+              </div>
+              <div className="absolute -inset-1 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl blur opacity-30"></div>
+            </div>
+            <h2 className="text-3xl font-bold text-white">
+              Prepora
+            </h2>
+          </div>
+          <p className="text-white text-lg font-medium">
+            Practice job interviews with AI
+          </p>
         </div>
-
-        <h3>Practice job interviews with AI</h3>
 
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="w-full space-y-6 mt-4 form"
+            className="w-full space-y-6"
           >
             {!isSignIn && (
-              <FormField
-                control={form.control}
-                name="name"
-                label="Name"
-                placeholder="Your Name"
-                type="text"
-              />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white block">
+                  Name
+                </label>
+                <input
+                  {...form.register("name")}
+                  type="text"
+                  placeholder="Your Name"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                />
+                {form.formState.errors.name && (
+                  <p className="text-red-400 text-sm">{form.formState.errors.name.message}</p>
+                )}
+              </div>
             )}
 
-            <FormField
-              control={form.control}
-              name="email"
-              label="Email"
-              placeholder="Your email address"
-              type="email"
-            />
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-white block">
+                Email
+              </label>
+              <input
+                {...form.register("email")}
+                type="email"
+                placeholder="Your email address"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+              />
+              {form.formState.errors.email && (
+                <p className="text-red-400 text-sm">{form.formState.errors.email.message}</p>
+              )}
+            </div>
 
-            <FormField
-              control={form.control}
-              name="password"
-              label="Password"
-              placeholder="Enter your password"
-              type="password"
-            />
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-white block">
+                Password
+              </label>
+              <input
+                {...form.register("password")}
+                type="password"
+                placeholder="Enter your password"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+              />
+              {form.formState.errors.password && (
+                <p className="text-red-400 text-sm">{form.formState.errors.password.message}</p>
+              )}
+            </div>
 
-            <Button className="btn" type="submit">
+            <button
+              type="submit"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl border-0 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
               {isSignIn ? "Sign In" : "Create an Account"}
-            </Button>
+            </button>
           </form>
         </Form>
 
-        <p className="text-center">
-          {isSignIn ? "No account yet?" : "Have an account already?"}
-          <Link
-            href={!isSignIn ? "/sign-in" : "/sign-up"}
-            className="font-bold text-user-primary ml-1"
-          >
-            {!isSignIn ? "Sign In" : "Sign Up"}
-          </Link>
-        </p>
+        <div className="mt-6 text-center">
+          <p className="text-white">
+            {isSignIn ? "No account yet?" : "Have an account already?"}
+            <Link
+              href={!isSignIn ? "/sign-in" : "/sign-up"}
+              className="ml-2 font-semibold text-purple-300 hover:text-purple-200 transition-all duration-200"
+            >
+              {!isSignIn ? "Sign In" : "Sign Up"}
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

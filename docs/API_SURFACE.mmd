@@ -1,0 +1,10 @@
+flowchart TB
+  A["POST /api/interview/generate\nBody: role, experience, tech\nResp: interviewId, questions"]
+  B["PUT /api/interview/[id]\nBody: answers\nResp: saved, score?"]
+  C["POST /api/ml/analyze-speech\nBody: audio (webm/ogg)\nResp: transcript, metrics"]
+  D["POST /api/tts/speak\nBody: text\nResp: audio (mp3)"]
+
+  A --> B
+  B --> C
+  B --> D
+

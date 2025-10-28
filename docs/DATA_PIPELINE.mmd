@@ -1,0 +1,19 @@
+flowchart TD
+  A["User Inputs: role, experience, tech"] --> B["/api/interview/generate"]
+  B --> C["generate_questions.py"]
+  C --> D[("question_recommender.pkl + data_preprocessor.pkl")]
+  C --> E["Questions JSON"]
+  E --> F[("Firestore: interviews/{id}/questions")]   
+
+  G["Voice Audio Chunks"] --> H["/api/ml/analyze-speech"]
+  H --> I["speech_analyzer.py"]
+  I --> J[("speech_analyzer.pkl")]
+  I --> K["Transcript + prosody metrics"]
+  K --> L[("Firestore: interviews/{id}/speech")]
+
+  M["Text Answers Submit"] --> N["/api/interview/[id]"]
+  N --> O["interview_predictor.py"]
+  O --> P[("interview_predictor.pkl")]  
+  O --> Q["Score/Prediction"]
+  Q --> R[("Firestore: interviews/{id}/results")]
+

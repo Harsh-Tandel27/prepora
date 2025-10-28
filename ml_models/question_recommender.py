@@ -32,7 +32,11 @@ class SimpleQuestionRecommender:
         self.questions_df = None
         self.tfidf_vectorizer = None
         self.question_vectors = None
-        self.stop_words = set(stopwords.words('english'))
+        # Load stopwords if available; fall back gracefully without network
+        try:
+            self.stop_words = set(stopwords.words('english'))
+        except Exception:
+            self.stop_words = set()
         
     def load_and_preprocess_questions(self, questions_path: str) -> bool:
         """Load and preprocess questions dataset"""

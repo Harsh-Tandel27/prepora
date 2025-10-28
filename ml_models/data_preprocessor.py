@@ -84,31 +84,58 @@ class EnhancedDataPreprocessor:
         print("📚 Loading and preprocessing questions data...")
         
         try:
-            df = pd.read_csv(file_path, encoding='latin-1')
+            # Robust CSV load that tolerates unquoted commas in the Answer field
+            import csv
+            rows = []
+            with open(file_path, 'r', encoding='latin-1', newline='') as f:
+                reader = csv.reader(f)
+                header = next(reader, None)
+                for fields in reader:
+                    if not fields:
+                        continue
+                    # Expect at least 5 columns: [Question Number, Question, Answer, Category, Difficulty]
+                    if len(fields) < 5:
+                        continue
+                    question_number = fields[0].strip()
+                    category = fields[-2].strip()
+                    difficulty = fields[-1].strip()
+                    question = fields[1].strip()
+                    # Join middle fields back into Answer to handle commas inside answers
+                    answer_parts = fields[2:-2]
+                    answer = ",".join(part.strip() for part in answer_parts)
+                    rows.append({
+                        'Question Number': question_number,
+                        'Question': question,
+                        'Answer': answer,
+                        'Category': category,
+                        'Difficulty': difficulty,
+                    })
+
+            df = pd.DataFrame(rows)
             print(f"✅ Loaded {len(df)} questions")
-            
+
             # Clean and validate data
             df = df.dropna(subset=['Question', 'Answer', 'Category', 'Difficulty'])
             df['Question'] = df['Question'].astype(str)
             df['Answer'] = df['Answer'].astype(str)
-            
+
             # Clean text data
             df['cleaned_question'] = df['Question'].apply(self._clean_text)
             df['cleaned_answer'] = df['Answer'].apply(self._clean_text)
-            
+
             # Create combined text for vectorization
             df['combined_text'] = df['cleaned_question'] + ' ' + df['cleaned_answer']
-            
+
             print(f"✅ Preprocessed {len(df)} questions")
-            
+
             self.preprocessing_info['questions_data'] = {
                 'total_questions': len(df),
                 'categories': df['Category'].unique().tolist(),
                 'difficulties': df['Difficulty'].unique().tolist()
             }
-            
+
             return df
-            
+
         except Exception as e:
             print(f"❌ Error processing questions: {e}")
             raise

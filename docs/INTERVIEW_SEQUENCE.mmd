@@ -1,0 +1,45 @@
+sequenceDiagram
+  autonumber
+  participant U as "User (Browser)"
+  participant UI as "Next.js Pages/Components"
+  participant API as "Next.js API Routes"
+  participant FB as "Firebase (Auth/Firestore)"
+  participant ML as "Python ML (ml_models)"
+
+  U->>UI: Sign up / Sign in
+  UI->>FB: Firebase Auth
+  FB-->>UI: Session token
+
+  U->>UI: Create interview (role, experience, tech)
+  UI->>API: POST /api/interview/generate
+  API->>ML: generate_questions.py with params
+  ML-->>API: Generated question set
+  API->>FB: Save interview + questions
+  API-->>UI: 200 OK (interviewId)
+
+  U->>UI: Open interview detail
+  UI->>FB: Fetch questions (subscribe)
+  FB-->>UI: Questions
+
+  U->>UI: Start voice answer (mic on)
+  UI->>API: POST /api/ml/analyze-speech (audio chunks)
+  API->>ML: speech_analyzer.py
+  ML-->>API: Transcript + prosody metrics
+  API->>FB: Append analysis to interview
+  FB-->>UI: Realtime update (metrics)
+
+  U->>UI: Submit text answers
+  UI->>API: PUT /api/interview/[id]
+  API->>ML: interview_predictor.py (optional scoring)
+  ML-->>API: Prediction/score
+  API->>FB: Persist answers + scores
+  FB-->>UI: Realtime update
+
+  U->>UI: View feedback
+  UI->>FB: Read feedback document(s)
+  alt Need audio summary
+    UI->>API: POST /api/tts/speak (feedback text)
+    API-->>UI: Audio stream
+  end
+
+

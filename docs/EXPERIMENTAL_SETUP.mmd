@@ -1,0 +1,57 @@
+flowchart TB
+  subgraph Tooling["Tooling"]
+    FE["Frontend: Next.js + TS + Tailwind"]
+    BE["API: Next.js API Routes"]
+    AUTHDB["Auth/DB: Firebase Auth + Firestore"]
+    PY["ML Runtime: Python 3.13 (venv)"]
+    LIBS["ML Libs: numpy, pandas, sklearn, nltk, textblob"]
+    DIA["Diagrams: Mermaid CLI"]
+  end
+
+  subgraph Data["Datasets & Artifacts"]
+    QA["dataset/: Q&A corpora"]
+    ART["trained_models/: *.pkl artifacts"]
+    SPEECH["Optional speech samples"]
+  end
+
+  subgraph Env["Environment & Config"]
+    NODE["Node deps (npm i)"]
+    VENV["Python venv + requirements.txt"]
+    FBENV["Firebase creds (.env + service account)"]
+  end
+
+  subgraph Procedure["Procedure"]
+    P1["1) Generate Interview\nPOST /api/interview/generate\nrun generate_questions.py → Firestore"]
+    P2["2) Capture Answers\nText + Voice (audio → /api/ml/analyze-speech → speech_analyzer.py)"]
+    P3["3) Persist Analysis\nTranscript, WPM, pauses, fillers → Firestore"]
+    P4["4) Score Session\nPUT /api/interview/[id] → interview_predictor.py"]
+    P5["5) Feedback View\nAggregate metrics; optional /api/tts/speak"]
+  end
+
+  subgraph Metrics["Metrics & Evaluation"]
+    MM["Model: hit@k, MAE/RMSE, calibration"]
+    MS["Speech: WPM, filler-rate, pause duration, sentiment"]
+    MU["UX: latency, time-to-feedback, completion"]
+    EV["Evaluation: hold-out, k-fold, ablations"]
+  end
+
+  FE --> NODE
+  BE --> NODE
+  PY --> VENV
+  AUTHDB --> FBENV
+  LIBS --> VENV
+  DIA --> NODE
+
+  QA --> P1
+  ART --> P1
+  SPEECH --> P2
+
+  P1 --> P2 --> P3 --> P4 --> P5
+  P3 --> MM
+  P4 --> MM
+  P2 --> MS
+  P5 --> MU
+  MM --> EV
+  MS --> EV
+  MU --> EV
+

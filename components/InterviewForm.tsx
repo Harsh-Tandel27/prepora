@@ -24,14 +24,32 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
     amount: 5
   });
 
-  // Job role options
-  const jobRoles = [
-    "Frontend Developer", "Backend Developer", "Full Stack Developer", "DevOps Engineer",
-    "Data Scientist", "Data Engineer", "Machine Learning Engineer", "Software Engineer",
-    "Mobile Developer", "UI/UX Designer", "Product Manager", "QA Engineer",
-    "System Administrator", "Cloud Engineer", "Security Engineer", "Database Administrator",
-    "Technical Lead", "Engineering Manager", "Solution Architect", "Other"
-  ];
+  // Job role options by interview type to reflect trained data coverage
+  const rolesByType: Record<string, string[]> = {
+    Technical: [
+      "Frontend Developer", "Backend Developer", "Full Stack Developer", "DevOps Engineer",
+      "Data Scientist", "Data Engineer", "Machine Learning Engineer", "Software Engineer",
+      "Mobile Developer", "QA Engineer", "Cloud Engineer", "Security Engineer",
+      "Database Administrator", "Solution Architect", "System Administrator", "Other"
+    ],
+    "System Design": [
+      "Backend Developer", "Full Stack Developer", "Solution Architect", "Cloud Engineer",
+      "Technical Lead", "Engineering Manager", "System Administrator", "Software Engineer"
+    ],
+    Behavioral: [
+      "Software Engineer", "Product Manager", "Engineering Manager", "Technical Lead",
+      "Data Scientist", "Backend Developer", "Frontend Developer"
+    ],
+    "Case Study": [
+      "Product Manager", "Data Scientist", "Engineering Manager", "Technical Lead"
+    ],
+    Mixed: [
+      "Software Engineer", "Full Stack Developer", "Backend Developer", "Frontend Developer",
+      "Product Manager", "Engineering Manager"
+    ]
+  };
+
+  const jobRoles = rolesByType[formData.type as keyof typeof rolesByType] || rolesByType["Technical"];
 
   // Role-specific tech stack mappings
   const roleTechStacks = {
@@ -198,27 +216,41 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
     }));
   };
 
+  // Helper: whether tech stack applies for selected type
+  const isTechStackApplicable = !/^(Behavioral|Case Study)$/i.test(String(formData.type || ""));
+
   const nextStep = () => {
     if (currentStep < steps.length - 1) {
+      // Skip Tech Stack step if not applicable
+      if (currentStep === 2 && !isTechStackApplicable) {
+        setCurrentStep(4);
+        return;
+      }
       setCurrentStep(currentStep + 1);
     }
   };
 
   const prevStep = () => {
     if (currentStep > 0) {
+      // Skip Tech Stack step if not applicable
+      if (currentStep === 4 && !isTechStackApplicable) {
+        setCurrentStep(2);
+        return;
+      }
       setCurrentStep(currentStep - 1);
     }
   };
 
   const handleTechStackToggle = (tech: string) => {
-    const currentTechs = formData.techstack ? formData.techstack.split(",").filter(t => t.trim()) : [];
+    const parseTechs = (s: string) => s.split(",").map(t => t.trim()).filter(Boolean);
+    const currentTechs = formData.techstack ? parseTechs(formData.techstack) : [];
+    let updated: string[];
     if (currentTechs.includes(tech)) {
-      const newTechs = currentTechs.filter(t => t !== tech);
-      setFormData(prev => ({ ...prev, techstack: newTechs.join(", ") }));
+      updated = currentTechs.filter(t => t !== tech);
     } else {
-      const newTechs = [...currentTechs, tech];
-      setFormData(prev => ({ ...prev, techstack: newTechs.join(", ") }));
+      updated = Array.from(new Set([...currentTechs, tech]));
     }
+    setFormData(prev => ({ ...prev, techstack: updated.join(", ") }));
   };
 
   const renderStepContent = () => {
@@ -235,7 +267,12 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
                       ? "border-primary-500 bg-gradient-to-br from-primary-500/20 to-primary-600/10 shadow-lg shadow-primary-500/25"
                       : "border-gray-600 bg-dark-300/50 hover:border-primary-400/50 hover:bg-dark-300/80"
                   }`}
-                  onClick={() => handleInputChange("type", type.value)}
+                  onClick={() => {
+                    handleInputChange("type", type.value);
+                    if (/^(Behavioral|Case Study)$/i.test(type.value)) {
+                      handleInputChange("techstack", "");
+                    }
+                  }}
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                   <div className="flex items-start space-x-4">
@@ -387,55 +424,69 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
       case 3: // Tech Stack
         return (
           <div className="space-y-6">
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-white mb-2">Select Your Tech Stack</h3>
-              <p className="text-gray-400">Choose technologies relevant to your role (optional)</p>
-            </div>
-            
-            <div className="bg-dark-300/30 rounded-2xl p-6 border border-gray-600/30">
-              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-h-80 overflow-y-auto custom-scrollbar">
-                {getTechStacksForRole(formData.role).map((tech, index) => {
-                  const isSelected = formData.techstack ? formData.techstack.split(",").includes(tech) : false;
-                  return (
-                    <button
-                      key={tech}
-                      type="button"
-                      onClick={() => handleTechStackToggle(tech)}
-                      className={`group p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 text-xs font-medium ${
-                        isSelected
-                          ? "border-primary-500 bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/25"
-                          : "border-gray-600 bg-dark-300/50 text-gray-300 hover:border-primary-400/50 hover:bg-dark-300/80 hover:text-white"
-                      }`}
-                      style={{ animationDelay: `${index * 20}ms` }}
-                    >
-                      <div className="flex items-center justify-center space-x-1">
-                        <span>{tech}</span>
-                        {isSelected && (
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            
-            {formData.techstack && (
-              <div className="bg-gradient-to-r from-primary-500/10 to-primary-600/10 rounded-2xl p-6 border border-primary-500/20">
-                <div className="flex items-center space-x-2 mb-4">
-                  <svg className="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <h4 className="text-lg font-semibold text-white">Selected Technologies</h4>
+            {isTechStackApplicable ? (
+              <>
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-white mb-2">Select Your Tech Stack</h3>
+                  <p className="text-gray-400">Choose technologies relevant to your role (optional)</p>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  {formData.techstack ? formData.techstack.split(",").filter(t => t.trim()).map((tech) => (
-                    <span key={tech} className="px-4 py-2 bg-primary-500/20 text-primary-300 rounded-xl text-sm font-medium border border-primary-500/30">
-                      {tech}
-                    </span>
-                  )) : null}
+            
+                <div className="bg-dark-300/30 rounded-2xl p-6 border border-gray-600/30">
+                  <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-h-80 overflow-y-auto custom-scrollbar">
+                    {getTechStacksForRole(formData.role).map((tech, index) => {
+                      const isSelected = formData.techstack ? formData.techstack.split(",").includes(tech) : false;
+                      return (
+                        <button
+                          key={tech}
+                          type="button"
+                          onClick={() => handleTechStackToggle(tech)}
+                          className={`group p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 text-xs font-medium ${
+                            isSelected
+                              ? "border-primary-500 bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/25"
+                              : "border-gray-600 bg-dark-300/50 text-gray-300 hover:border-primary-400/50 hover:bg-dark-300/80 hover:text-white"
+                          }`}
+                          style={{ animationDelay: `${index * 20}ms` }}
+                        >
+                          <div className="flex items-center justify-center space-x-1">
+                            <span>{tech}</span>
+                            {isSelected && (
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                {formData.techstack && (
+                  <div className="bg-gradient-to-r from-primary-500/10 to-primary-600/10 rounded-2xl p-6 border border-primary-500/20">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <svg className="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <h4 className="text-lg font-semibold text-white">Selected Technologies</h4>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {formData.techstack ? formData.techstack.split(",").filter(t => t.trim()).map((tech) => (
+                        <span key={tech} className="px-4 py-2 bg-primary-500/20 text-primary-300 rounded-xl text-sm font-medium border border-primary-500/30">
+                          {tech}
+                        </span>
+                      )) : null}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="bg-dark-300/30 rounded-2xl p-6 border border-gray-600/30 text-center">
+                <h3 className="text-lg font-semibold text-white mb-2">Tech Stack Not Required</h3>
+                <p className="text-gray-400">For the selected interview type, tech stack is not applicable.</p>
+                <div className="mt-4">
+                  <button type="button" onClick={nextStep} className="px-4 py-2 rounded-lg bg-primary-500 text-white">
+                    Continue
+                  </button>
                 </div>
               </div>
             )}

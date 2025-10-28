@@ -24,8 +24,8 @@ const InterviewDetails = async ({ params }: { params: Promise<{ id: string }> })
   const userName = user?.name || 'User';
 
   return (
-    <>
-      <div className="flex flex-row gap-4 justify-between">
+    <div className="root-layout">
+        <div className="flex flex-row gap-4 justify-between">
         <div className="flex flex-row gap-4 items-center max-sm:flex-col">
           <div className="flex flex-row gap-4 items-center">
             <Image
@@ -50,11 +50,19 @@ const InterviewDetails = async ({ params }: { params: Promise<{ id: string }> })
         <InterviewWrapper
           questions={questions}
           userName={userName}
+          interviewId={id}
+          userId={user.id}
+          interviewData={{
+            role: interview.role,
+            level: interview.level,
+            techstack: interview.techstack,
+            type: interview.type
+          }}
         />
       ) : (
         <div>Loading questions...</div>
       )}
-    </>
+    </div>
   );
 };
 

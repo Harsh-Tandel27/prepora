@@ -227,8 +227,29 @@ def generate_questions(role, level, techstack, type_focus, amount):
         
         questions = []
         
-        # Strategy 1: Get questions from the specific category and difficulty
-        if category and difficulty:
+        # If user explicitly chose an interview type, honor it
+        explicit_category = None
+        if type_focus:
+            tf = type_focus.lower()
+            # Normalize known types to dataset categories
+            if 'system' in tf:
+                explicit_category = 'System Design'
+            elif 'case' in tf:
+                explicit_category = 'Case Study'
+            elif 'behavior' in tf:
+                explicit_category = 'Behavioral'
+            elif 'technical' in tf:
+                # Use mapped or fallback general technical buckets
+                explicit_category = category or 'General Programming'
+            elif 'mixed' in tf:
+                explicit_category = 'Mixed'
+
+        # If explicit category provided, override base category (except Mixed)
+        if explicit_category and explicit_category != 'Mixed':
+            category = explicit_category
+
+        # Strategy 1: Get questions from the chosen category and difficulty
+        if category and difficulty and category != 'Mixed':
             category_questions = recommender.get_questions_by_filters(
                 category=category,
                 difficulty=difficulty,
@@ -251,6 +272,19 @@ def generate_questions(role, level, techstack, type_focus, amount):
                         if len(questions) >= amount:
                             break
         
+        # Mixed interview: blend multiple categories
+        if (type_focus and 'mixed' in type_focus.lower()) and len(questions) < amount:
+            mix_pool = []
+            preferred = ['Behavioral', 'System Design', 'Algorithms', 'Back-end', 'Front-end', 'Security', 'DevOps']
+            for cat in preferred + [c for c in all_categories if c not in preferred]:
+                more = recommender.get_questions_by_filters(category=cat, limit=2)
+                if len(more) > 0:
+                    mix_pool.extend(more['Question'].tolist())
+                if len(mix_pool) >= amount * 3:
+                    break
+            random.shuffle(mix_pool)
+            questions.extend(mix_pool[:max(0, amount - len(questions))])
+
         # Strategy 3: If still not enough, prioritize related categories based on tech stack
         if len(questions) < amount:
             # Define related categories for better fallback

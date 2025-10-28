@@ -6,12 +6,62 @@ export async function createFeedback(params: CreateFeedbackParams) {
   const { interviewId, userId, transcript, feedbackId } = params;
 
   try {
-    // For now, create a basic feedback structure
-    // In the future, this could integrate with your ML models for analysis
+    console.log('🚀 Creating ML-powered feedback...');
+    
+    // Get interview data for context
+    const interview = await getInterviewById(interviewId);
+    if (!interview) {
+      throw new Error("Interview not found");
+    }
+
+    // Call the ML-powered feedback generation API
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/feedback/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        interviewId,
+        userId,
+        transcript,
+        interviewData: {
+          role: interview.role,
+          level: interview.level,
+          techstack: interview.techstack,
+          type: interview.type
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Feedback generation failed: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Feedback generation failed');
+    }
+
+    console.log('✅ ML-powered feedback generated successfully');
+    return { success: true, feedbackId: result.feedbackId };
+  } catch (error) {
+    console.error("❌ Error creating feedback:", error);
+    
+    // Fallback to basic feedback if ML generation fails
+    console.log('🔄 Falling back to basic feedback...');
+    return await createBasicFeedback(params);
+  }
+}
+
+async function createBasicFeedback(params: CreateFeedbackParams) {
+  const { interviewId, userId, transcript, feedbackId } = params;
+
+  try {
     const feedback = {
       interviewId: interviewId,
       userId: userId,
-      totalScore: 75, // Default score - could be calculated by ML models
+      totalScore: 75,
       categoryScores: [
         {
           name: "Communication Skills",
@@ -57,7 +107,7 @@ export async function createFeedback(params: CreateFeedbackParams) {
 
     return { success: true, feedbackId: feedbackRef.id };
   } catch (error) {
-    console.error("Error saving feedback:", error);
+    console.error("Error saving basic feedback:", error);
     return { success: false };
   }
 }

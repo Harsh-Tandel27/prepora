@@ -1,0 +1,76 @@
+flowchart TD
+  subgraph Client["Next.js App (app/)"]
+    A["Landing: (root)/page.tsx"]
+    B["Auth: (auth)/sign-in & sign-up"]
+    C["Dashboard: (root)/interview/page.tsx"]
+    D["List/Detail: (root)/interview/[id]/page.tsx"]
+    E["Feedback UI: (root)/interview/[id]/feedback/page.tsx"]
+    V["VoiceInterview Component: components/VoiceInterview.tsx"]
+    IForm["InterviewForm: components/InterviewForm.tsx"]
+    Card["InterviewCard: components/InterviewCard.tsx"]
+  end
+
+  subgraph API["Next.js API Routes (app/api/)"]
+    subgraph InterviewAPI["/api/interview/.../"]
+      GEN["generate/route.ts"]
+      SAVE["[id]/route.ts"]
+      AI["ai/"]
+    end
+    subgraph MLAPI["/api/ml/.../"]
+      AS["analyze-speech/route.ts"]
+    end
+    subgraph TTSAPI["/api/tts/.../"]
+      SPK["speak/route.ts"]
+    end
+  end
+
+  subgraph Backend["Firebase + Python ML"]
+    FB[("Firebase Auth + Firestore via firebase/client.ts & admin.ts")]
+    subgraph ML["ml_models/ (Python)"]
+      QG["generate_questions.py"]
+      SA["speech_analyzer.py"]
+      IP["interview_predictor.py"]
+      DP["data_preprocessor.py"]
+      QR["question_recommender.py"]
+      MODELS[("trained_models/*.pkl")]
+    end
+  end
+
+  %% User Journey
+  U["User"] -->|visits| A
+  A --> B
+  B -->|Firebase Auth| FB
+  FB -->|session| C
+  C -->|create interview| IForm
+  IForm -->|POST /api/interview/generate| GEN
+  GEN -->|invoke| QG
+  QG --> MODELS
+  QG -->|questions| GEN
+  GEN -->|persist| FB
+  GEN -->|200 questions| C
+
+  C -->|open interview| D
+  D -->|start voice| V
+  V -->|record audio| AS
+  AS -->|invoke| SA
+  SA --> MODELS
+  SA -->|metrics & transcript| AS
+  AS -->|persist| FB
+
+  D -->|submit text answers| SAVE
+  SAVE -->|persist answers| FB
+  D -->|get feedback| E
+  E -->|optional TTS| SPK
+  SPK -->|synthesize| E
+
+  %% Insights / AI feedback
+  SAVE -->|may call| IP
+  IP --> MODELS
+  IP -->|predictions| SAVE
+  SAVE -->|store insights| FB
+
+  %% Data roundtrips
+  D -->|subscribe| FB
+  E -->|read feedback| FB
+
+

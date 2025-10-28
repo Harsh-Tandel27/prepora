@@ -1,0 +1,47 @@
+flowchart LR
+  %% User-perspective flow, feature-driven, no technical endpoints
+  subgraph Start["Getting Started"]
+    L["Open App"]
+    S["Sign In / Create Account"]
+  end
+
+  subgraph Plan["Plan Interview"]
+    P1["Choose Role"]
+    P2["Set Experience Level"]
+    P3["Pick Technologies / Topics"]
+    P4["Create Practice Session"]
+  end
+
+  subgraph Practice["Practice"]
+    Q["View Suggested Questions"]
+    A1["Answer by Typing"]
+    A2["Answer by Speaking"]
+    H["Hints / Tips (optional)"]
+  end
+
+  subgraph Feedback["Feedback & Insights"]
+    F1["See Suggested Answers"]
+    F2["Get Skill Feedback"]
+    F3["Speech Insights: pace, pauses, fillers"]
+    F4["Overall Score & Recommendations"]
+  end
+
+  subgraph Iterate["Iterate & Improve"]
+    I1["Retry Questions"]
+    I2["Save Session & Track Progress"]
+    I3["Share or Export Summary (optional)"]
+  end
+
+  L --> S --> P1 --> P2 --> P3 --> P4 --> Q
+  Q --> A1
+  Q --> A2
+  A1 --> H
+  A2 --> H
+  H --> F1
+  A1 --> F1
+  A2 --> F1
+  F1 --> F2 --> F3 --> F4
+  F4 --> I1 --> Q
+  F4 --> I2
+  I2 --> I3
+

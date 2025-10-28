@@ -1,0 +1,40 @@
+flowchart LR
+  subgraph Client["Next.js Client (app/ + components/)"]
+    UI["Pages & UI Components"]
+    Voice["VoiceInterview"]
+    Forms["InterviewForm"]
+  end
+
+  subgraph Server["Next.js API Routes (app/api/)"]
+    Gen["/api/interview/generate"]
+    Save["/api/interview/[id]"]
+    Analyze["/api/ml/analyze-speech"]
+    Speak["/api/tts/speak"]
+  end
+
+  subgraph Services["Services"]
+    Firebase[("Firebase Auth + Firestore")]
+    subgraph ML["Python ML (ml_models/)"]
+      QG["generate_questions.py"]
+      SA["speech_analyzer.py"]
+      IP["interview_predictor.py"]
+      Models[("trained_models/*.pkl")]
+    end
+  end
+
+  UI -->|Auth| Firebase
+  Forms -->|Create Interview| Gen
+  Gen --> QG
+  QG --> Models
+  Gen -->|Store| Firebase
+  UI -->|Open Interview| Save
+  Voice -->|Audio| Analyze
+  Analyze --> SA
+  SA --> Models
+  Analyze -->|Metrics/Transcript| Firebase
+  Save --> IP
+  IP --> Models
+  Save -->|Answers/Scores| Firebase
+  UI -->|Feedback| Firebase
+  UI -->|Optional TTS| Speak
+

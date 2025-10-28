@@ -108,7 +108,7 @@ Question Number,Question,Answer,Category,Difficulty
 107,What is continuous integration in DevOps?,Continuous integration is the practice of automating the integration of code changes into a software project.,DevOps,Medium
 108,How do you implement a binary search algorithm?,"Binary search involves repeatedly dividing in half the portion of the list that could contain the item, until you've narrowed the possibilities to just one.",Full-stack,Medium
 109,Describe the MVC architecture.,"MVC architecture stands for Model-View-Controller, separating the application into three interconnected components.",Full-stack,Medium
-110,What are microservices and how do they differ from monolithic architectures?,"Microservices are a software development technique�a variant of the service-oriented architecture architectural style that structures an application as a collection of loosely coupled services. In a monolithic architecture, all components are interconnected and interdependent.",Back-end,Medium
+110,What are microservices and how do they differ from monolithic architectures?,"Microservices are a software development technique�a variant of the service-oriented architecture architectural style that structures an application as a collection of loosely coupled services. In a monolithic architecture, all components are interconnected and interdependent.",Back-end,Medium
 111,Explain the difference between '==' and '===' in JavaScript.,"'==' compares values after type conversion, while '===' compares both value and type.",Front-end,Hard
 112,What is Kubernetes and how does it relate to containerization?,"Kubernetes is an open-source platform for automating deployment, scaling, and operations of application containers across clusters of hosts.",DevOps,Medium
 113,Describe how you would implement a RESTful API in a back-end application.,"A RESTful API is implemented by setting up HTTP routes (GET, POST, PUT, DELETE) and handling requests and responses in a stateless manner, often using JSON.",Back-end,Medium
@@ -132,7 +132,7 @@ Question Number,Question,Answer,Category,Difficulty
 131,What is continuous integration in DevOps?,Continuous integration is the practice of automating the integration of code changes into a software project.,DevOps,Medium
 132,How do you implement a binary search algorithm?,"Binary search involves repeatedly dividing in half the portion of the list that could contain the item, until you've narrowed the possibilities to just one.",Full-stack,Medium
 133,Describe the MVC architecture.,"MVC architecture stands for Model-View-Controller, separating the application into three interconnected components.",Full-stack,Medium
-134,What are microservices and how do they differ from monolithic architectures?,"Microservices are a software development technique�a variant of the service-oriented architecture architectural style that structures an application as a collection of loosely coupled services. In a monolithic architecture, all components are interconnected and interdependent.",Back-end,Hard
+134,What are microservices and how do they differ from monolithic architectures?,"Microservices are a software development technique�a variant of the service-oriented architecture architectural style that structures an application as a collection of loosely coupled services. In a monolithic architecture, all components are interconnected and interdependent.",Back-end,Hard
 135,Explain the difference between '==' and '===' in JavaScript.,"'==' compares values after type conversion, while '===' compares both value and type.",Front-end,Easy
 136,What is Kubernetes and how does it relate to containerization?,"Kubernetes is an open-source platform for automating deployment, scaling, and operations of application containers across clusters of hosts.",DevOps,Hard
 137,Describe how you would implement a RESTful API in a back-end application.,"A RESTful API is implemented by setting up HTTP routes (GET, POST, PUT, DELETE) and handling requests and responses in a stateless manner, often using JSON.",Back-end,Medium
@@ -198,4 +198,184 @@ Question Number,Question,Answer,Category,Difficulty
 197,Create a real-time sports analytics system using sensor data.,"Utilize streaming data processing, machine learning for pattern recognition, and efficient data storage solutions.",Data Engineering,Hard
 198,Implement a quantum algorithm for solving a well-known computational problem.,"Discuss quantum computing principles, qubit manipulation, and specific algorithms like Grover's or Shor's algorithm.",Algorithms,Hard
 199,Design a secure mobile payment system for developing countries.,"Focus on security protocols, offline capabilities, user authentication, and low-resource optimizations.",Security,Hard
-200,Build a scalable image processing pipeline for a photo-sharing app.,"Implement distributed processing, efficient storage, and consider ML techniques for feature extraction.",System Design,Hard
+200,What is a process versus a thread?,A process is an independent program with its own memory space; a thread is a lightweight unit of execution within a process sharing memory.,Operating Systems,Easy
+201,Explain context switching.,Context switching saves and restores CPU state to switch between processes or threads, enabling multitasking.,Operating Systems,Medium
+202,What is virtual memory and why is it useful?,Virtual memory abstracts physical memory allowing larger address spaces and isolation; implemented via paging.,Operating Systems,Medium
+203,Describe deadlock and its conditions.,Deadlock is when tasks wait indefinitely; Coffman conditions: mutual exclusion, hold and wait, no preemption, circular wait.,Operating Systems,Hard
+204,Explain paging vs segmentation.,Paging splits memory into fixed-size pages; segmentation uses variable-size segments based on logical divisions.,Operating Systems,Medium
+205,What is a syscall?,A system call is a controlled entry point to request kernel services from user space.,Operating Systems,Easy
+206,What is a container vs a virtual machine?,Containers share the host OS kernel; VMs emulate hardware and run full guest OS instances.,Cloud,Easy
+207,Explain IaaS vs PaaS vs SaaS.,IaaS provides infrastructure, PaaS provides a platform/runtime, SaaS provides complete applications over the internet.,Cloud,Easy
+208,What is an AWS VPC?,A Virtual Private Cloud is an isolated network in AWS with subnets, route tables, and security controls.,Cloud,Medium
+209,Describe security groups vs NACLs in AWS.,Security groups are stateful instance firewalls; NACLs are stateless subnet-level ACLs.,Cloud,Medium
+210,How does AWS Auto Scaling work?,Monitors metrics to scale instances in/out based on policies to maintain performance and cost.,Cloud,Medium
+211,What is CloudFront and when to use it?,CloudFront is AWS's CDN to cache and serve content from edge locations reducing latency.,Cloud,Easy
+212,Explain GCP IAM roles.,IAM roles define permissions; primitive, predefined, and custom roles control access to resources.,Cloud,Medium
+213,What is Azure Functions?,Serverless compute for event-driven code execution with automatic scaling.,Cloud,Easy
+214,What is GraphQL and how differs from REST?,GraphQL lets clients query exactly the data they need with a typed schema; REST exposes fixed resources and endpoints.,APIs,Medium
+215,Explain GraphQL resolvers.,Resolvers map schema fields to data fetch logic, executed per field request.,APIs,Medium
+216,What is pagination and common strategies?,Paginating splits results; strategies include offset/limit, cursor-based, keyset pagination.,APIs,Medium
+217,How do you version a REST API?,Use URI versioning, headers, or content negotiation; communicate deprecations and maintain compatibility.,APIs,Medium
+218,What is idempotency in APIs?,An idempotent request yields the same result when repeated (e.g., PUT) preventing duplicate side effects.,APIs,Easy
+219,Explain rate limiting strategies.,Token bucket, leaky bucket, fixed window, sliding window; often implemented at gateway level.,APIs,Medium
+220,What is OAuth2 PKCE?,PKCE enhances OAuth for public clients by mitigating authorization code interception using code verifier/challenge.,Security,Medium
+221,Explain JWT structure and validation.,JWT has header.payload.signature; validate signature, issuer, audience, expiry, and not-before.,Security,Medium
+222,What is CSRF and how to prevent it?,Cross-Site Request Forgery abuses auth context; prevent with same-site cookies, CSRF tokens, and double-submit cookie.,Security,Medium
+223,Explain HTTPS TLS handshake at high level.,Client and server negotiate protocol/ciphers, exchange keys, verify certificates, and derive session keys.,Security,Hard
+224,What is HSTS?,HTTP Strict Transport Security forces HTTPS to prevent downgrade attacks and cookie hijacking.,Security,Easy
+225,Describe symmetric vs asymmetric encryption.,Symmetric uses one key; asymmetric uses public/private key pairs for encryption and signatures.,Security,Easy
+226,What is responsive images in web?,Use srcset, sizes, and modern formats (WebP/AVIF) to serve appropriate images for devices.,Front-end,Easy
+227,Explain Web Vitals.,Core metrics (LCP, FID/INP, CLS) measuring loading, interactivity, and visual stability.,Front-end,Medium
+228,What is hydration in React?,Hydration attaches event listeners to server-rendered HTML to make it interactive on the client.,Front-end,Medium
+229,Explain React reconciliation.,Diffing algorithm compares virtual DOM trees to compute minimal updates.,Front-end,Hard
+230,What is memoization in React (useMemo/useCallback)?,Caches values/functions to avoid expensive recalculations and rerenders for stable deps.,Front-end,Medium
+231,Explain accessibility basics (a11y).,Use semantic HTML, ARIA roles, keyboard navigation, contrast, and proper labeling.,Front-end,Easy
+232,What are service workers?,Background scripts enabling offline caching, push notifications, and network interception.,Front-end,Medium
+233,Describe Android activity lifecycle.,onCreate→onStart→onResume→onPause→onStop→onDestroy manage UI and resources.,Mobile,Medium
+234,What is ViewModel + LiveData in Android?,Architecture components for UI-related data with lifecycle awareness.,Mobile,Medium
+235,Explain iOS MVC vs MVVM.,Patterns for separating concerns; MVVM uses bindings to reduce controller bloat.,Mobile,Medium
+236,What is React Native bridge?,Bridge marshals data between JS and native threads to access platform APIs.,Mobile,Hard
+237,Explain SQLite vs Room on Android.,Room is an ORM over SQLite providing compile-time checks and abstractions.,Mobile,Medium
+238,What is Flutter widget tree?,Declarative UI composed of widgets; rebuilt on state changes.,Mobile,Easy
+239,Explain ACID vs BASE.,ACID ensures strong consistency; BASE is basically available, soft state, eventual consistency.,Database Systems,Medium
+240,What is sharding vs partitioning?,Sharding splits data across nodes; partitioning divides within a single database instance.,Database Systems,Medium
+241,Explain replication lag and mitigation.,Delay between primary and replicas; mitigate with tuning, semi-sync, read-after-write strategies.,Database Systems,Hard
+242,What is Bloom filter and use cases?,Probabilistic structure for membership tests with false positives; used in caches and databases.,Data Structures,Medium
+243,Explain Trie and applications.,Prefix tree enabling fast string prefix queries; used in autocomplete and DNS.,Data Structures,Medium
+244,What is a heap and typical operations?,Binary heap supports insert and extract-min/max in O(log n).,Data Structures,Easy
+245,Describe union-find (disjoint set).,Supports union and find with path compression and union by rank for near O(1).,Data Structures,Medium
+246,Explain backtracking with an example.,Systematically explores candidates (e.g., N-Queens) undoing choices when constraints fail.,Algorithms,Medium
+247,What is dynamic programming memoization vs tabulation?,Top-down caches recursive calls; bottom-up builds solutions iteratively.,Algorithms,Easy
+248,Explain Dijkstra vs A*.,Dijkstra finds shortest path; A* uses heuristic to guide search faster.,Algorithms,Medium
+249,What is NP-Completeness?,Class of problems verifiable in polynomial time; NP-Complete are hardest in NP via reductions.,Algorithms,Hard
+250,Explain CAP trade-offs for AP systems.,Favor availability and partition tolerance; use eventual consistency and conflict resolution.,Distributed Systems,Medium
+251,What is leader election?,Protocol to choose a coordinator (e.g., Raft, Bully) in distributed systems.,Distributed Systems,Medium
+252,Explain gossip protocols.,Epidemic-style information dissemination for scalability and robustness.,Distributed Systems,Hard
+253,What is backpressure in streaming?,Mechanism to signal producers to slow down to avoid overwhelming consumers.,Data Engineering,Medium
+254,Explain Kafka partitions and consumer groups.,Partitions enable parallelism; consumer groups scale consumption and provide fault tolerance.,Data Engineering,Medium
+255,What is Spark lazy evaluation?,Transformations are lazy; actions trigger DAG execution enabling optimization.,Data Engineering,Medium
+256,Explain feature scaling and why.,Normalizing/standardizing features improves model convergence and performance.,Machine Learning,Easy
+257,What is bias-variance tradeoff?,Balance underfitting vs overfitting; use regularization, more data, or simpler models.,Machine Learning,Medium
+258,Explain precision, recall, F1.,Precision measures correctness, recall measures completeness, F1 balances both.,Machine Learning,Easy
+259,What is cross-validation?,Resampling technique (k-fold) to estimate model performance robustly.,Machine Learning,Easy
+260,Explain ROC AUC.,Area under ROC curve summarizing TPR vs FPR trade-off.,Machine Learning,Medium
+261,What is gradient descent?,Iterative optimization adjusting parameters opposite gradient to minimize loss.,Machine Learning,Easy
+262,Explain container image layers.,Images are layered filesystems enabling caching and incremental builds.,DevOps,Easy
+263,What is GitOps?,Managing infra/apps via Git as source of truth with automated reconciliations.,DevOps,Medium
+264,Explain blue/green vs canary.,Blue/green swaps environments; canary gradually shifts traffic to new version.,DevOps,Medium
+265,What is observability vs monitoring?,Observability uses logs, metrics, traces to infer system state; monitoring tracks known conditions.,DevOps,Medium
+266,Explain Terraform state.,State tracks resource mappings; must be secured, locked, and versioned.,DevOps,Hard
+267,What is rate-based WAF rule?,Web Application Firewall rule that blocks or throttles requests above a threshold.,Security,Medium
+268,Explain CSP (Content Security Policy).,HTTP header restricting resource sources to mitigate XSS and injection.,Security,Medium
+269,What is clickjacking and defense?,UI redress attack; defend with X-Frame-Options/SameSite cookies and frame-busting.,Security,Easy
+270,Explain password stretching.,Increases hash computation cost (PBKDF2/bcrypt/scrypt/Argon2) to resist brute force.,Security,Medium
+271,What is event loop in Node.js?,Single-threaded loop handling callbacks, I/O via libuv threadpool and epoll/kqueue.,Back-end,Medium
+272,Explain NestJS modules and providers.,Modules organize providers/controllers; dependency injection manages services.,Back-end,Medium
+273,What is CQRS?,Separates reads and writes into different models/services for scalability.,Back-end,Hard
+274,Explain WebSockets vs SSE.,WebSockets are bidirectional; SSE is server-to-client unidirectional event stream.,Web Development,Medium
+275,What is HTTP/2 multiplexing?,Allows multiple concurrent streams over one TCP connection reducing latency.,Web Development,Medium
+276,Explain Cumulative Layout Shift (CLS).,Metric of visual stability; reduce with size attributes and reserved space.,Front-end,Medium
+277,What is Tree Shaking?,Eliminates unused code in bundling via ES module static analysis.,Front-end,Medium
+278,Explain code splitting.,Split bundles by route or component to reduce initial load time.,Front-end,Medium
+279,What is a monorepo and tooling?,Single repo for multiple packages; tools like Nx, Turborepo manage builds and deps.,Full-stack,Medium
+280,Explain serverless pitfalls.,Cold starts, vendor lock-in, observability challenges, and limits on execution time.,Full-stack,Medium
+281,What is edge computing?,Processing closer to users to reduce latency and bandwidth with CDNs/edge runtimes.,System Design,Medium
+282,Explain idempotent consumers.,Consumers that handle duplicate messages safely by de-duplication or transactional reads.,System Design,Hard
+283,What is SAGA pattern?,Manages distributed transactions via compensating actions across services.,System Design,Hard
+284,Explain chaos engineering.,Practice of injecting failures to test resilience and observability.,System Design,Medium
+285,What is time complexity of QuickSort average and worst?,Average O(n log n), worst O(n^2) when pivot choices are bad.,Algorithms,Easy
+286,Explain hashmap collision resolution.,Techniques include chaining and open addressing (linear/quadratic probing, double hashing).,Data Structures,Easy
+287,What is a semaphore?,Synchronization primitive controlling access to resources via counters.,Operating Systems,Medium
+288,Explain copy-on-write.,Optimization deferring copying until mutation; used in forks and filesystems.,Operating Systems,Medium
+289,What is eventual consistency?,Guarantee that replicas converge; reads may be stale temporarily.,Distributed Systems,Easy
+290,Explain CDN cache invalidation strategies.,Time-based TTLs, cache-busting URLs, and explicit purge APIs.,Web Development,Medium
+291,What is OpenID Connect?,Identity layer over OAuth 2.0 providing authentication via ID tokens.,Security,Medium
+292,Explain message idempotency keys.,Unique keys to prevent duplicate processing in distributed systems.,System Design,Medium
+293,What is a circuit breaker?,Pattern that stops calls to failing services until recovery to prevent cascading failures.,System Design,Medium
+294,Explain backoff with jitter.,Randomized delays between retries to avoid thundering herd.,System Design,Easy
+295,What is a shadow deployment?,Mirrors traffic to a new version without impacting users for validation.,DevOps,Hard
+296,Explain binary serialization formats.,Protobuf/Avro/Thrift are compact, schema-driven formats improving performance.,Back-end,Medium
+297,What is gRPC?,High-performance RPC framework using HTTP/2 and Protobuf, supports streaming.,Back-end,Medium
+298,Explain OAuth scopes and consent.,Scopes limit token permissions; users grant consent to specific access.,Security,Easy
+299,What is SSO?,Single Sign-On lets users authenticate once to access multiple applications.,Security,Easy
+300,Explain domain-driven design (DDD) bounded contexts.,Define clear boundaries for models and ubiquitous language to avoid coupling.,Architecture,Hard
+301,Tell me about yourself.,Provide a concise professional summary highlighting key experiences, strengths, and goals.,Behavioral,Easy
+302,Describe a challenging situation you faced at work.,Explain the context, your actions, obstacles, and the measurable outcome (STAR).,Behavioral,Medium
+303,How do you handle tight deadlines?,Discuss prioritization, breaking tasks, communication with stakeholders, and delivering MVPs.,Behavioral,Easy
+304,Give an example of a time you showed leadership.,Describe setting direction, aligning team, removing blockers, and outcomes.,Behavioral,Medium
+305,Tell me about a time you failed.,Own the mistake, explain learnings, corrective actions, and prevented recurrence.,Behavioral,Medium
+306,How do you handle conflict with a teammate?,Explain empathy, active listening, focusing on shared goals, and negotiation.,Behavioral,Easy
+307,Describe a time you went above and beyond.,Show initiative, impact on customers or team, and metrics.,Behavioral,Easy
+308,How do you prioritize tasks when everything is important?,Explain frameworks (Eisenhower, RICE), clarify requirements, and stakeholder alignment.,Behavioral,Medium
+309,Tell me about a time you influenced without authority.,Discuss persuasion, data, building allies, and outcome.,Behavioral,Hard
+310,How do you handle ambiguous requirements?,Explain clarifying questions, prototypes, assumptions, and iterative validation.,Behavioral,Medium
+311,Describe a time you improved a process.,Detail baseline metrics, change implemented, measurement, and sustained results.,Behavioral,Medium
+312,How do you handle negative feedback?,Emphasize growth mindset, specific example, action plan, and improvement.,Behavioral,Easy
+313,Tell me about a time you mentored someone.,Discuss goals, coaching approach, feedback loops, and growth outcomes.,Behavioral,Medium
+314,Describe a time you managed multiple stakeholders.,Explain mapping interests, communication cadence, and risk management.,Behavioral,Hard
+315,What motivates you at work?,Tie motivation to impact, learning, team success, and company mission.,Behavioral,Easy
+316,How do you handle stress?,Describe routines, planning, communication, and seeking help early.,Behavioral,Easy
+317,Tell me about a time you delivered under constraints.,Highlight trade-offs, scope control, risk mitigation, and delivery.,Behavioral,Medium
+318,Describe a time you disagreed with a decision.,Explain respectful challenge, data, alignment, and commitment post-decision.,Behavioral,Medium
+319,How do you ensure quality while moving fast?,Talk about automation, code reviews, feature flags, and monitoring.,Behavioral,Medium
+320,Give an example of customer obsession.,Describe gathering insights, acting on feedback, and measurable customer impact.,Behavioral,Medium
+321,Tell me about a time you managed a production incident.,Cover detection, triage, communication, remediation, and postmortem.,Behavioral,Hard
+322,Describe a time you had to learn something quickly.,Explain learning plan, resources, application, and results.,Behavioral,Easy
+323,How do you collaborate with cross-functional teams?,Discuss shared goals, clear ownership, regular syncs, and documentation.,Behavioral,Easy
+324,Give an example of data-driven decision making.,Explain hypothesis, data collected, analysis, decision, and impact.,Behavioral,Medium
+325,Tell me about a time you reduced costs.,Describe optimization, trade-offs, and quantified savings.,Behavioral,Medium
+326,Describe a situation where you handled a difficult stakeholder.,Explain empathy, boundaries, escalation paths, and outcomes.,Behavioral,Hard
+327,How do you ensure inclusivity on your team?,Discuss psychological safety, equitable meetings, and recognizing contributions.,Behavioral,Medium
+328,Tell me about a time you managed up.,Explain proactive updates, risk surfacing, and expectation alignment.,Behavioral,Medium
+329,Describe a time you identified a risk early.,Discuss monitoring, signaling, mitigation plan, and avoided impact.,Behavioral,Medium
+330,How do you balance short-term and long-term goals?,Explain roadmap, milestones, and technical debt management.,Behavioral,Hard
+331,Give an example of ownership.,Describe taking responsibility beyond role, end-to-end delivery, and impact.,Behavioral,Medium
+332,How do you handle scope creep?,Discuss change control, negotiation, re-prioritization, and documentation.,Behavioral,Medium
+333,Tell me about a time you improved team morale.,Explain recognition, rituals, feedback culture, and outcomes.,Behavioral,Medium
+334,Describe a time you handled confidential information.,Discuss discretion, least privilege, and compliance.,Behavioral,Easy
+335,How do you onboard quickly to a new codebase?,Explain reading docs, running locally, small PRs, and mentors.,Behavioral,Easy
+336,Tell me about a time you resolved a blocker.,Explain root cause analysis, alternatives, and stakeholder alignment.,Behavioral,Medium
+337,Describe a time you negotiated trade-offs.,Discuss constraints, options, data, and decision rationale.,Behavioral,Hard
+338,How do you handle repetitive tasks?,Automation, batching, and proposing efficient workflows.,Behavioral,Easy
+339,Give an example of bias for action.,Describe swift decision with limited info, risk handling, and result.,Behavioral,Medium
+340,Tell me about a time you improved reliability.,Explain SLOs, error budgets, incident trends, and fixes.,Behavioral,Hard
+341,Design a URL shortener service,Discuss ID generation hashing collision handling read heavy caching database schema and rate limiting,System Design,Medium
+342,Design a news feed system,Explain fanout on write vs read ranking signals feed aggregation and storage,System Design,Hard
+343,Design a ride sharing dispatch system,Discuss real time location updates matching surge pricing and consistency,System Design,Hard
+344,Design a scalable chat service,Cover WebSocket vs long polling message delivery ordering persistence and online presence,System Design,Medium
+345,Design a file storage service like Dropbox,Explain client sync metadata service chunking deduplication and sharing,System Design,Hard
+346,Design a search autocomplete,Discuss trie prefix index ranking latency budgets and abuse prevention,System Design,Medium
+347,Design rate limiting for an API,Explain token bucket leaky bucket distributed counters and eviction,System Design,Medium
+348,Design a metrics collection system,Cover agents ingestion queues time series storage rollups and dashboards,System Design,Hard
+349,Design a payment processing system,Discuss idempotency consistency PCI concerns retries and reconciliation,System Design,Hard
+350,Design a notification system,Explain push vs pull fanout preferences batching and delivery guarantees,System Design,Medium
+351,Design a CDN,Discuss edge caching invalidation origin shielding and content routing,System Design,Hard
+352,Design a video streaming platform,Explain encoding ABR CDN storage and session management,System Design,Hard
+353,Design a rate based fraud detection pipeline,Cover streaming features model serving feedback loop and latency,System Design,Hard
+354,Design a logging platform,Discuss ingestion indexing retention search and multi tenant isolation,System Design,Medium
+355,Design a feature flag service,Explain evaluation rollout audit and low latency cache, System Design,Easy
+356,Design a leaderboard for games,Discuss ranking real time updates sharding and anti cheating,System Design,Medium
+357,Design an e commerce cart service,Explain session handling inventory consistency and promotions,System Design,Medium
+358,Design a URL crawler,Discuss politeness deduplication frontier scheduling and storage,System Design,Hard
+359,Design a real time collaboration editor,Explain CRDT vs OT concurrency presence and persistence,System Design,Hard
+360,Design a job scheduler,Discuss priorities retries backoff and distributed locks,System Design,Medium
+361,Market sizing for a food delivery startup,Estimate market using top down and bottom up assumptions with clear model,Case Study,Medium
+362,Improve conversion funnel for a SaaS product,Analyze funnel metrics form friction pricing experiments and expected impact,Case Study,Medium
+363,Reduce churn for a subscription app,Identify segments reasons interventions and success metrics,Case Study,Medium
+364,Optimize delivery routes,Propose constraints heuristics data needs and trade offs,Case Study,Hard
+365,Increase marketplace liquidity,Design levers for supply demand balance metrics and monitoring,Case Study,Hard
+366,Pricing strategy for a new feature,Outline experiments elasticity willingness to pay and guardrails,Case Study,Medium
+367,Launch plan for a new geography,Define research GTM KPIs risks and rollout phases,Case Study,Medium
+368,Customer support backlog reduction,Analyze inflow drivers automation deflection and staffing model,Case Study,Medium
+369,Improve onboarding completion,Map user journey identify drop offs test changes and measure lift,Case Study,Easy
+370,Drive adoption of a collaboration feature,Propose education prompts network effects and measurement plan,Case Study,Medium
+371,Incident postmortem and remediation plan,Identify root cause impact fixes and long term actions with owners,Case Study,Easy
+372,Lower cloud costs by 20 percent,Analyze spend hotspots rightsizing commitments architecture changes and risks,Case Study,Hard
+373,Internationalization rollout plan,Detail scope localization testing and phased enablement with metrics,Case Study,Medium
+374,Improve search relevance,Evaluate signals weighting experiments and success metrics,Case Study,Hard
+375,Reduce support response time,Model staffing SLAs queues and async channels,Case Study,Medium
+376,Define north star and input metrics,Propose metric tree alignment and dashboards,Case Study,Easy
+377,Experiment design for new homepage,Define hypothesis variants sample size and power analysis,Case Study,Medium
+378,Backlog prioritization for next quarter,Use RICE or ICE align with strategy and dependencies,Case Study,Medium
+379,Retention improvement strategy,Segment cohorts lifecycle messaging and value moments,Case Study,Hard
+380,Improve data quality across pipelines,Propose contracts validation observability and ownership,Case Study,Hard

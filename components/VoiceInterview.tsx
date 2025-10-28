@@ -6,6 +6,7 @@ interface VoiceInterviewProps {
   questions: string[];
   userName: string;
   onComplete: (transcript: string) => void;
+  interviewData?: { role: string; level: string; techstack: string[]; type: string };
 }
 
 interface ConversationEntry {
@@ -23,7 +24,7 @@ interface InterviewState {
   isProcessing: boolean;
 }
 
-export default function VoiceInterview({ questions, userName, onComplete }: VoiceInterviewProps) {
+export default function VoiceInterview({ questions, userName, onComplete, interviewData }: VoiceInterviewProps) {
   // Core state
   const [interviewState, setInterviewState] = useState<InterviewState>({
     phase: 'preparation',
@@ -35,8 +36,7 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
   
   const [conversation, setConversation] = useState<ConversationEntry[]>([]);
   const [currentAnswer, setCurrentAnswer] = useState('');
-  const [selectedVoice, setSelectedVoice] = useState('pNInz6obpgDQGcFmaJgB');
-  const [availableVoices, setAvailableVoices] = useState<any[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState('');
   const [audioLevel, setAudioLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [showVoiceSelector, setShowVoiceSelector] = useState(false);
@@ -85,20 +85,13 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
 
 
 
-  // Fetch available voices
+  // Pick a random voice ID each session (server will accept empty to default too)
   useEffect(() => {
-    const fetchVoices = async () => {
-      try {
-        const response = await fetch('/api/tts/speak');
-        if (response.ok) {
-          const data = await response.json();
-          setAvailableVoices(data.voices);
-        }
-      } catch (error) {
-        console.error('Error fetching voices:', error);
-      }
-    };
-    fetchVoices();
+    const defaultVoices = [
+      'pNInz6obpgDQGcFmaJgB', '21m00Tcm4TlvDq8ikWAM', 'AZnzlk1XvdvUeBnXmlld', 'EXAVITQu4vr4xnSDxMaL'
+    ];
+    const random = defaultVoices[Math.floor(Math.random() * defaultVoices.length)];
+    setSelectedVoice(random);
   }, []);
 
   // Initialize audio context for visual feedback
@@ -146,22 +139,24 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
   useEffect(() => {
     if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
       try {
+        console.log('🎤 Initializing speech recognition...');
         recognitionRef.current = new (window as any).webkitSpeechRecognition();
         recognitionRef.current.continuous = true;
         recognitionRef.current.interimResults = true;
         recognitionRef.current.lang = 'en-US';
-        recognitionRef.current.maxAlternatives = 1;
-        
-        // Better settings for capturing natural speech
-        recognitionRef.current.continuous = true; // Keep listening continuously
-        recognitionRef.current.interimResults = true; // Get real-time results
-        recognitionRef.current.maxAlternatives = 3; // Get multiple alternatives for better accuracy
+        recognitionRef.current.maxAlternatives = 3;
         
         // Add pause detection
         let pauseTimeout: NodeJS.Timeout | null = null;
         let lastSpeechTime = Date.now();
         
+        recognitionRef.current.onstart = () => {
+          console.log('🎤 Speech recognition started');
+          setError(null);
+        };
+        
         recognitionRef.current.onresult = (event: any) => {
+          console.log('🎤 Speech recognition result:', event);
           let finalTranscript = '';
           let interimTranscript = '';
           
@@ -176,6 +171,9 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
               interimTranscript += transcript;
             }
           }
+          
+          console.log('🎤 Final transcript:', finalTranscript);
+          console.log('🎤 Interim transcript:', interimTranscript);
           
           // Clean up the transcriptions while preserving filler words
           if (interimTranscript) {
@@ -213,8 +211,9 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
         };
 
         recognitionRef.current.onerror = (event: any) => {
-          console.error('Speech recognition error:', event.error);
+          console.error('❌ Speech recognition error:', event.error);
           if (event.error === 'no-speech') {
+            console.log('🔄 No speech detected, restarting...');
             restartRecognition();
           } else {
             setError(`Speech recognition error: ${event.error}`);
@@ -223,16 +222,23 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
         };
 
         recognitionRef.current.onend = () => {
+          console.log('🎤 Speech recognition ended');
           if (interviewState.phase === 'listening') {
+            console.log('🔄 Restarting speech recognition...');
             restartRecognition();
           }
         };
+        
+        console.log('✅ Speech recognition initialized successfully');
       } catch (error) {
-        console.error('Error initializing speech recognition:', error);
+        console.error('❌ Error initializing speech recognition:', error);
         setError('Speech recognition not available in this browser');
       }
+    } else {
+      console.error('❌ Speech recognition not supported in this browser');
+      setError('Speech recognition not supported in this browser');
     }
-  }, [interviewState.phase]);
+  }, []); // Remove interviewState.phase dependency
 
   const restartRecognition = useCallback(() => {
     if (recognitionRef.current && interviewState.phase === 'listening' && !interviewState.isSpeaking) {
@@ -332,20 +338,29 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
   };
 
   const startListening = useCallback(() => {
+    console.log('🎤 Attempting to start listening...');
+    console.log('🎤 Recognition ref exists:', !!recognitionRef.current);
+    console.log('🎤 Currently listening:', interviewState.isListening);
+    console.log('🎤 Currently speaking:', interviewState.isSpeaking);
+    
     if (recognitionRef.current && !interviewState.isListening && !interviewState.isSpeaking) {
       try {
+        console.log('🎤 Starting speech recognition...');
         recognitionRef.current.start();
         setInterviewState(prev => ({ ...prev, isListening: true }));
         
         restartTimeoutRef.current = setTimeout(() => {
           if (interviewState.phase === 'listening') {
+            console.log('🎤 Timeout reached, stopping recognition');
             recognitionRef.current?.stop();
           }
         }, 30000);
       } catch (error) {
-        console.error('Error starting speech recognition:', error);
+        console.error('❌ Error starting speech recognition:', error);
         setError('Error starting speech recognition');
       }
+    } else {
+      console.log('❌ Cannot start listening - conditions not met');
     }
   }, [interviewState.isListening, interviewState.isSpeaking, interviewState.phase]);
 
@@ -612,41 +627,7 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
         </div>
 
         {/* Voice Selector */}
-        {interviewState.phase === 'preparation' && (
-          <div className="mb-6">
-            <button
-              onClick={() => setShowVoiceSelector(!showVoiceSelector)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 mx-auto"
-            >
-              🎵 Change AI Voice & Style
-            </button>
-            
-            {showVoiceSelector && (
-              <div className="mt-4 bg-dark-300 p-4 rounded-lg border border-gray-600">
-                <h3 className="text-white font-semibold mb-3">Select AI Voice:</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {availableVoices.map((voice) => (
-                    <button
-                      key={voice.id}
-                      onClick={() => {
-                        setSelectedVoice(voice.id);
-                        setShowVoiceSelector(false);
-                      }}
-                      className={`p-3 rounded-lg border-2 transition-all ${
-                        selectedVoice === voice.id
-                          ? 'border-primary-500 bg-primary-500/20 text-white'
-                          : 'border-gray-600 bg-dark-200 text-gray-300 hover:border-primary-400'
-                      }`}
-                    >
-                      <div className="font-medium">{voice.name}</div>
-                      <div className="text-xs text-gray-400">{voice.tone}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Voice selector removed; random voice is used per session */}
       </div>
 
       {/* Error Display */}
@@ -685,6 +666,19 @@ export default function VoiceInterview({ questions, userName, onComplete }: Voic
 
       {/* Main Content Area */}
       <div className="space-y-6">
+        {/* Summary of selected configuration */}
+        {interviewState.phase === 'preparation' && interviewData && (
+          <div className="bg-dark-300 p-6 rounded-lg border border-gray-600">
+            <h3 className="text-xl font-semibold text-white mb-2">Interview Setup</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-300">
+              <div><span className="text-gray-400">Type:</span> {interviewData.type}</div>
+              <div><span className="text-gray-400">Role:</span> {interviewData.role}</div>
+              <div><span className="text-gray-400">Level:</span> {interviewData.level}</div>
+              <div><span className="text-gray-400">Tech Stack:</span> {interviewData.techstack && interviewData.techstack.length ? interviewData.techstack.join(', ') : 'General'}</div>
+              <div><span className="text-gray-400">Questions:</span> {questions.length}</div>
+            </div>
+          </div>
+        )}
         {/* Current Question Display */}
         {interviewState.phase !== 'preparation' && interviewState.phase !== 'complete' && (
           <div className="bg-dark-300 p-6 rounded-lg border border-gray-600">
