@@ -53,7 +53,7 @@ export function HeroSection() {
             <h2 className="text-4xl tracking-tighter font-geist bg-clip-text text-transparent mx-auto md:text-6xl bg-[linear-gradient(180deg,_#000_0%,_rgba(0,_0,_0,_0.75)_100%)] dark:bg-[linear-gradient(180deg,_#FFF_0%,_rgba(255,_255,_255,_0.00)_202.08%)]">
               Master Your Next Interview with{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 dark:from-purple-300 dark:to-orange-200">
-                Voice AI
+                PREPORA
               </span>
             </h2>
             <p className="max-w-2xl mx-auto text-gray-600 dark:text-gray-300">
@@ -85,7 +85,7 @@ export function HeroSection() {
                   Interactive AI Interview
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto">
-                  Experience realistic interview scenarios with our advanced voice AI technology
+                  Experience realistic interview scenarios with PREPORA technology
                 </p>
                 <div className="flex justify-center space-x-2 mt-6">
                   <div className="w-3 h-3 bg-purple-400 rounded-full animate-pulse" />

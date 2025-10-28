@@ -44,7 +44,7 @@ const Index = () => {
         title="🚀 AI-Powered Interview Practice"
         subtitle={{
           regular: "Master Your Next Interview with ",
-          gradient: "Voice AI",
+          gradient: "PREPORA",
         }}
         description="Practice real interview scenarios with our advanced AI interviewer. Get instant feedback, improve your confidence, and land your dream job."
         ctaText="Start Free Trial"
