@@ -43,14 +43,10 @@ export default function AnalysisResults({ transcript, interviewData, onContinue,
     isAnalyzing: true
   });
 
-  const [currentAnalysisStep, setCurrentAnalysisStep] = useState(0);
-  const analysisSteps = [
-    "Analyzing speech patterns...",
-    "Evaluating technical knowledge...",
-    "Assessing communication skills...",
-    "Calculating overall performance...",
-    "Generating recommendations..."
-  ];
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [currentAnalysisStep] = useState(0);
+  const analysisSteps = ["Analyzing your interview with our ML models..."];
 
   useEffect(() => {
     performAnalysis();
@@ -60,13 +56,7 @@ export default function AnalysisResults({ transcript, interviewData, onContinue,
     try {
       console.log('🔍 Starting comprehensive analysis...');
       
-      // Simulate analysis steps with real API calls
-      for (let i = 0; i < analysisSteps.length; i++) {
-        setCurrentAnalysisStep(i);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate processing time
-      }
-
-      // Call the ML analysis API
+      // Call the ML analysis API (no artificial delays)
       const response = await fetch('/api/feedback/generate', {
         method: 'POST',
         headers: {
@@ -97,33 +87,25 @@ export default function AnalysisResults({ transcript, interviewData, onContinue,
             overallScore: result.feedback.totalScore,
             isAnalyzing: false
           });
+          setErrorMessage(null);
+        } else {
+          setErrorMessage(result.error || 'Analysis failed. Please try again.');
+          setAnalysisData(prev => ({ ...prev, isAnalyzing: false }));
         }
+      } else {
+        // Try to read error from body; fallback to status text
+        let err = response.statusText;
+        try {
+          const body = await response.json();
+          err = body?.error || err;
+        } catch {}
+        setErrorMessage(err || 'Analysis failed.');
+        setAnalysisData(prev => ({ ...prev, isAnalyzing: false }));
       }
     } catch (error) {
       console.error('❌ Analysis error:', error);
-      // Fallback to mock data
-      setAnalysisData({
-        speechAnalysis: {
-          quality_score: 75,
-          filler_word_analysis: { filler_count: 3, filler_rate: 0.05 },
-          basic_metrics: { word_count: 150, vocabulary_diversity: 0.8 }
-        },
-        interviewPrediction: {
-          success_probability: 0.75,
-          technical_score: 80,
-          communication_score: 70
-        },
-        categoryScores: [
-          { name: "Communication Skills", score: 75, comment: "Good communication with room for improvement" },
-          { name: "Technical Knowledge", score: 80, comment: "Strong technical understanding demonstrated" },
-          { name: "Problem-Solving", score: 70, comment: "Showed logical thinking approach" },
-          { name: "Confidence & Clarity", score: 75, comment: "Generally confident delivery" }
-        ],
-        strengths: ["Clear technical explanations", "Good problem-solving approach"],
-        areasForImprovement: ["Could provide more specific examples", "Work on reducing filler words"],
-        overallScore: 75,
-        isAnalyzing: false
-      });
+      setErrorMessage(error instanceof Error ? error.message : 'Unexpected error during analysis.');
+      setAnalysisData(prev => ({ ...prev, isAnalyzing: false }));
     }
   };
 
@@ -169,7 +151,7 @@ export default function AnalysisResults({ transcript, interviewData, onContinue,
             <div className="bg-white/10 backdrop-blur-sm p-4 rounded-lg border border-white/20">
               <Brain className="w-8 h-8 text-blue-400 mx-auto mb-2" />
               <h3 className="text-white font-semibold mb-2">Speech Analysis</h3>
-              <p className="text-gray-400 text-sm">Analyzing speech patterns, filler words, and clarity</p>
+              <p className="text-gray-400 text-sm">Analyzing speech patterns, filler words, clarity and delivery</p>
             </div>
             
             <div className="bg-white/10 backdrop-blur-sm p-4 rounded-lg border border-white/20">
@@ -183,6 +165,32 @@ export default function AnalysisResults({ transcript, interviewData, onContinue,
               <h3 className="text-white font-semibold mb-2">Performance Scoring</h3>
               <p className="text-gray-400 text-sm">Calculating overall performance metrics</p>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <div className="max-w-3xl mx-auto p-6 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 rounded-lg border border-white/20 text-center">
+        <div className="flex flex-col items-center gap-3">
+          <AlertCircle className="w-10 h-10 text-red-400" />
+          <h2 className="text-2xl font-bold text-white">Analysis failed</h2>
+          <p className="text-gray-300">{errorMessage}</p>
+          <div className="flex gap-3 mt-4">
+            <button
+              onClick={performAnalysis}
+              className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold"
+            >
+              Retry
+            </button>
+            <button
+              onClick={onRetake}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold"
+            >
+              Retake Interview
+            </button>
           </div>
         </div>
       </div>

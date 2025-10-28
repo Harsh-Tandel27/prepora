@@ -48,6 +48,8 @@ export default function VoiceInterview({ questions, userName, onComplete, interv
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSpeechTimeRef = useRef<number>(Date.now());
+  const lastPauseInsertTimeRef = useRef<number>(0);
 
   const firstName = userName.split(' ')[0];
 
@@ -148,7 +150,7 @@ export default function VoiceInterview({ questions, userName, onComplete, interv
         
         // Add pause detection
         let pauseTimeout: NodeJS.Timeout | null = null;
-        let lastSpeechTime = Date.now();
+        lastSpeechTimeRef.current = Date.now();
         
         recognitionRef.current.onstart = () => {
           console.log('🎤 Speech recognition started');
@@ -161,7 +163,7 @@ export default function VoiceInterview({ questions, userName, onComplete, interv
           let interimTranscript = '';
           
           // Update last speech time
-          lastSpeechTime = Date.now();
+          lastSpeechTimeRef.current = Date.now();
           
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcript = event.results[i][0].transcript;
@@ -199,9 +201,11 @@ export default function VoiceInterview({ questions, userName, onComplete, interv
           
           // Set pause detection (2 seconds of silence = pause)
           pauseTimeout = setTimeout(() => {
-            if (Date.now() - lastSpeechTime > 2000) {
+            if (Date.now() - lastSpeechTimeRef.current > 2000) {
               setCurrentAnswer(prev => {
                 if (prev && !prev.endsWith(' -- ')) {
+                  lastPauseInsertTimeRef.current = Date.now();
+                  lastSpeechTimeRef.current = Date.now();
                   return prev + ' -- ';
                 }
                 return prev;
@@ -239,6 +243,26 @@ export default function VoiceInterview({ questions, userName, onComplete, interv
       setError('Speech recognition not supported in this browser');
     }
   }, []); // Remove interviewState.phase dependency
+
+  // Global silence watcher while listening: auto-insert '--' on long silence
+  useEffect(() => {
+    if (!interviewState.isListening) return;
+    const interval = setInterval(() => {
+      const now = Date.now();
+      // If silence longer than 3s since last speech/pause insert, add a pause marker
+      if (now - lastSpeechTimeRef.current > 3000) {
+        setCurrentAnswer(prev => {
+          if (prev && !prev.endsWith(' -- ')) {
+            lastPauseInsertTimeRef.current = now;
+            lastSpeechTimeRef.current = now;
+            return prev + ' -- ';
+          }
+          return prev;
+        });
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [interviewState.isListening]);
 
   const restartRecognition = useCallback(() => {
     if (recognitionRef.current && interviewState.phase === 'listening' && !interviewState.isSpeaking) {
@@ -348,6 +372,7 @@ export default function VoiceInterview({ questions, userName, onComplete, interv
         console.log('🎤 Starting speech recognition...');
         recognitionRef.current.start();
         setInterviewState(prev => ({ ...prev, isListening: true }));
+        lastSpeechTimeRef.current = Date.now();
         
         restartTimeoutRef.current = setTimeout(() => {
           if (interviewState.phase === 'listening') {

@@ -103,9 +103,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
   const isSignIn = type === "sign-in";
 
   return (
-    <div className="relative">
+    <div className="relative max-w-md mx-auto">
       {/* Glassmorphism Card */}
-      <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl shadow-2xl p-8 w-full">
+      <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl shadow-[0_10px_40px_-10px_rgba(124,58,237,0.6)] p-8 w-full">
         {/* Logo and Brand */}
         <div className="text-center mb-8">
           <div className="flex flex-row gap-3 justify-center items-center mb-4">
