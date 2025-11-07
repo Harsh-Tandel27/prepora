@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/actions/auth.action";
-import { User, Mail, Calendar, Settings } from "lucide-react";
+import { User, Mail, Calendar } from "lucide-react";
+import ProfileCompletionForm from "@/components/profile/ProfileCompletionForm";
 
 const ProfilePage = async () => {
   const user = await getCurrentUser();
@@ -38,12 +39,14 @@ const ProfilePage = async () => {
                   <Mail className="h-5 w-5 text-muted-foreground" />
                   <span className="text-foreground">{user.email}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-foreground">
-                    Member since {new Date(user.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
+                {user.createdAt && (
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-foreground">
+                      Member since {new Date(user.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -67,30 +70,14 @@ const ProfilePage = async () => {
                 </div>
               </div>
             </div>
-
-            <div className="card p-4">
-              <h4 className="font-semibold text-foreground mb-2">Settings</h4>
-              <div className="space-y-2">
-                <button className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-muted transition-colors">
-                  <Settings className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-foreground">Account Settings</span>
-                </button>
-                <button className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-muted transition-colors">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-foreground">Edit Profile</span>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
-        <div className="card p-6">
-          <h3 className="text-xl font-semibold text-foreground mb-4">About Prepora</h3>
-          <p className="text-muted-foreground">
-            Prepora helps you practice for technical interviews with AI-powered feedback. 
-            Improve your interview skills, build confidence, and land your dream job.
-          </p>
-        </div>
+        {/* Profile Completion Form */}
+        <ProfileCompletionForm 
+          userId={user.id} 
+          initialProfile={user.profile}
+        />
       </section>
     </div>
   );

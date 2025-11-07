@@ -50,21 +50,51 @@ export default function InterviewWrapper({ questions, userName, interviewId, use
           questionIndex: Math.floor(index / 2) // Approximate question index
         })).filter(msg => msg.content.length > 0);
 
-        const result = await createFeedback({
-          interviewId,
-          userId,
-          transcript: transcriptMessages,
-          feedbackId: null
+        // Generate ML feedback
+        const feedbackResponse = await fetch('/api/feedback/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            interviewId,
+            userId,
+            transcript: transcriptMessages,
+            interviewData
+          }),
         });
 
-        if (result.success && result.feedbackId) {
-          setFeedbackId(result.feedbackId);
-          console.log('✅ Feedback generated successfully:', result.feedbackId);
+        if (feedbackResponse.ok) {
+          const feedbackResult = await feedbackResponse.json();
           
-          // Redirect to feedback page after a short delay
-          setTimeout(() => {
-            router.push(`/interview/${interviewId}/feedback`);
-          }, 2000);
+          if (feedbackResult.success && feedbackResult.feedback) {
+            // Update interview document with analysis results
+            const updateResponse = await fetch(`/api/interview/${interviewId}/update`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                transcript: finalTranscript,
+                analysis: feedbackResult.feedback,
+                feedbackId: feedbackResult.feedbackId
+              }),
+            });
+
+            if (updateResponse.ok) {
+              setFeedbackId(feedbackResult.feedbackId);
+              console.log('✅ Interview updated with analysis results');
+              
+              // Redirect to feedback page after a short delay
+              setTimeout(() => {
+                router.push(`/interview/${interviewId}/feedback`);
+              }, 2000);
+            } else {
+              console.error('❌ Failed to update interview with analysis');
+            }
+          } else {
+            console.error('❌ Failed to generate feedback:', feedbackResult.error);
+          }
         } else {
           console.error('❌ Failed to generate feedback');
         }
@@ -87,6 +117,8 @@ export default function InterviewWrapper({ questions, userName, interviewId, use
     return (
       <AnalysisResults
         transcript={finalTranscript}
+        interviewId={interviewId}
+        userId={userId}
         interviewData={interviewData}
         onContinue={handleContinueToFeedback}
         onRetake={handleRetakeInterview}

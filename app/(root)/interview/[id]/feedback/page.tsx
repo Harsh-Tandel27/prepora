@@ -21,7 +21,8 @@ const Feedback = async ({ params }: RouteParams) => {
   const interview = await getInterviewById(id);
   if (!interview) redirect("/");
 
-  const feedback = await getFeedbackByInterviewId({
+  // Use analysis data from interview document if available, otherwise fetch from feedback collection
+  const feedback = interview.analysis || await getFeedbackByInterviewId({
     interviewId: id,
     userId: user?.id!,
   });

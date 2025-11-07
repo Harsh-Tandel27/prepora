@@ -37,10 +37,26 @@ export async function signUp(params: SignUpParams) {
         message: "User already exists. Please sign in.",
       };
 
-    // save user to db
+    // Initialize default profile
+    const defaultProfile = {
+      age: null,
+      gender: null,
+      education: null,
+      maritalStatus: null,
+      currentlyEmployed: null,
+      experienceMonths: null,
+      willingToRelocate: null,
+      hasAcquaintance: null,
+      profileCompleted: false,
+      profileCompletionPercentage: 0
+    };
+
+    // save user to db with default profile
     await db.collection("users").doc(uid).set({
       name,
       email,
+      profile: defaultProfile,
+      createdAt: new Date().toISOString(),
       // profileURL,
       // resumeURL,
     });

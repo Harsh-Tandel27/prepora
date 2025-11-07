@@ -49,18 +49,28 @@ export default function LandingPage() {
     return () => obs.disconnect()
   }, [])
 
-  const userPromise = useMemo(() => getCurrentUser(), [])
+  const [user, setUser] = useState(null)
+  
+  useEffect(() => {
+    // Fetch user data on client side
+    const fetchUser = async () => {
+      try {
+        const response = await fetch('/api/auth/me')
+        if (response.ok) {
+          const userData = await response.json()
+          setUser(userData.user)
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error)
+      }
+    }
+    fetchUser()
+  }, [])
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white relative overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
       {/* Top Navigation */}
-      <Navbar user={undefined} />
-
-      {/* Global background gradients for consistent animation/theme */}
-      <div className="pointer-events-none fixed inset-0 -z-10 animate-[bgShift_12s_ease-in-out_infinite]">
-        <div className="absolute inset-0 bg-[radial-gradient(600px_300px_at_10%_10%,#3b82f6_18%,transparent_60%),radial-gradient(500px_300px_at_90%_20%,#8b5cf6_14%,transparent_50%)] opacity-25" />
-        <div className="absolute inset-0 bg-[radial-gradient(900px_600px_at_50%_120%,#3b82f6_0%,transparent_65%)] opacity-20" />
-      </div>
+      <Navbar user={user} />
 
       {/* Legacy Hero preserved for original style */}
       <HeroSection />
@@ -72,11 +82,13 @@ export default function LandingPage() {
 
       {/* HOW IT WORKS */}
       <section id="how" className="container mx-auto px-4 py-20">
-        <h2 className="text-3xl md:text-4xl font-bold text-center">How It Works</h2>
-        <p className="mt-3 text-center text-slate-300">A simple, effective flow to level up fast</p>
-        <div className="relative mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold">How It Works</h2>
+          <p className="mt-3 text-slate-300">A simple, effective flow to level up fast</p>
+        </div>
+        <div className="relative grid gap-6 sm:grid-cols-2 lg:grid-cols-4 justify-items-center">
           {steps.map((s, i) => (
-            <div key={s.title} className="relative group rounded-2xl border border-white/10 bg-white/5 p-6 hover:shadow-[0_0_30px_-10px_rgba(59,130,246,0.5)] transition">
+            <div key={s.title} className="relative group rounded-2xl border border-border bg-card p-6 hover:shadow-[0_0_30px_-10px_rgba(59,130,246,0.5)] transition">
               <div className="flex items-center justify-between">
                 <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center">
                   <s.icon className="w-6 h-6" />
@@ -94,29 +106,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* FEATURES GRID */}
-      <section id="features" className="container mx-auto px-4 py-20">
-        <h2 className="text-3xl md:text-4xl font-bold text-center">Everything you need</h2>
-        <p className="mt-3 text-center text-slate-300">Powerful features to prepare with confidence</p>
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
-          {features.map((f) => (
-            <div key={f.title} className="rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:-translate-y-1 hover:shadow-[0_0_35px_-10px_rgba(139,92,246,0.6)]">
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center mb-3">
-                <f.icon className="w-6 h-6" />
-              </div>
-              <div className="font-semibold">{f.title}</div>
-              <p className="mt-2 text-sm text-slate-300">{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* TESTIMONIALS */}
       <section id="testimonials" className="container mx-auto px-4 py-20">
-        <h2 className="text-3xl md:text-4xl font-bold text-center">What users say</h2>
-        <div className="relative mt-10 rounded-2xl border border-white/10 bg-white/5 p-6">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold">What users say</h2>
+        </div>
+        <div className="relative rounded-2xl border border-border bg-card p-6 max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
-            <button aria-label="Previous" className="p-2 rounded-lg border border-white/10 hover:bg-white/10" onClick={() => setActiveTestimonial((t) => (t - 1 + testimonials.length) % testimonials.length)}>
+            <button aria-label="Previous" className="p-2 rounded-lg border border-border hover:bg-muted" onClick={() => setActiveTestimonial((t) => (t - 1 + testimonials.length) % testimonials.length)}>
               <ChevronLeft className="w-5 h-5" />
             </button>
             <div className="max-w-3xl text-center">
@@ -126,13 +123,13 @@ export default function LandingPage() {
               <p className="mt-4 text-lg text-slate-100">{testimonials[activeTestimonial].quote}</p>
               <div className="mt-3 text-sm text-slate-300">{testimonials[activeTestimonial].name} • {testimonials[activeTestimonial].role} @ {testimonials[activeTestimonial].company}</div>
             </div>
-            <button aria-label="Next" className="p-2 rounded-lg border border-white/10 hover:bg-white/10" onClick={() => setActiveTestimonial((t) => (t + 1) % testimonials.length)}>
+            <button aria-label="Next" className="p-2 rounded-lg border border-border hover:bg-muted" onClick={() => setActiveTestimonial((t) => (t + 1) % testimonials.length)}>
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
           <div className="mt-4 flex justify-center gap-2">
             {testimonials.map((_, i) => (
-              <button key={i} aria-label={`Go to testimonial ${i + 1}`} className={`h-2 w-2 rounded-full ${i === activeTestimonial ? "bg-white" : "bg-white/30"}`} onClick={() => setActiveTestimonial(i)} />
+              <button key={i} aria-label={`Go to testimonial ${i + 1}`} className={`h-2 w-2 rounded-full ${i === activeTestimonial ? "bg-foreground" : "bg-muted-foreground"}`} onClick={() => setActiveTestimonial(i)} />
             ))}
           </div>
         </div>
@@ -141,33 +138,35 @@ export default function LandingPage() {
       {/* STATS */}
       <section id="stats" ref={statsRef} className="relative overflow-hidden py-20">
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-indigo-900/20 to-transparent" />
-        <div className="container mx-auto px-4 grid gap-6 md:grid-cols-4">
+        <div className="container mx-auto px-4">
+          <div className="grid gap-6 md:grid-cols-4 justify-items-center">
           {stats.map((s) => (
-            <div key={s.label} className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+            <div key={s.label} className="rounded-2xl border border-border bg-card p-6 text-center">
               <div className="text-4xl font-extrabold tracking-tight">
                 {countersStarted ? <AnimatedNumber value={s.value} suffix={s.suffix} /> : `0${s.suffix || ''}`}
               </div>
               <div className="mt-2 text-slate-300">{s.label}</div>
             </div>
           ))}
+          </div>
         </div>
       </section>
 
       {/* PRICING */}
       <section id="pricing" className="container mx-auto px-4 py-20">
-        <div className="flex items-center justify-between">
+        <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold">Pricing</h2>
-          <div className="flex items-center gap-2 text-sm">
-            <span className={!yearly ? "text-white" : "text-slate-400"}>Monthly</span>
-            <button aria-label="Toggle pricing" onClick={() => setYearly(!yearly)} className="relative h-6 w-12 rounded-full bg-white/10">
-              <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${yearly ? "right-1" : "left-1"}`} />
+          <div className="flex items-center justify-center gap-2 text-sm mt-4">
+            <span className={!yearly ? "text-foreground" : "text-muted-foreground"}>Monthly</span>
+            <button aria-label="Toggle pricing" onClick={() => setYearly(!yearly)} className="relative h-6 w-12 rounded-full bg-muted">
+              <span className={`absolute top-1 h-4 w-4 rounded-full bg-background transition ${yearly ? "right-1" : "left-1"}`} />
             </button>
-            <span className={yearly ? "text-white" : "text-slate-400"}>Yearly</span>
+            <span className={yearly ? "text-foreground" : "text-muted-foreground"}>Yearly</span>
           </div>
         </div>
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-3 justify-items-center">
           {pricing.map((p, idx) => (
-            <div key={p.tier} className={`rounded-2xl border ${p.popular ? "border-purple-400/50 shadow-[0_0_35px_-12px_rgba(139,92,246,0.8)]" : "border-white/10"} bg-white/5 p-6`}>
+            <div key={p.tier} className={`rounded-2xl border ${p.popular ? "border-purple-400/50 shadow-[0_0_35px_-12px_rgba(139,92,246,0.8)]" : "border-border"} bg-card p-6`}>
               {p.popular && <div className="mb-3 inline-block rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 px-3 py-1 text-xs font-semibold">Most Popular</div>}
               <div className="text-xl font-semibold">{p.tier}</div>
               <div className="mt-2 text-3xl font-extrabold">{yearly ? p.priceY : p.priceM}</div>
@@ -176,7 +175,7 @@ export default function LandingPage() {
                   <li key={f} className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-purple-400" />{f}</li>
                 ))}
               </ul>
-              <Link href="/sign-up" className="mt-6 inline-flex w-full items-center justify-center rounded-xl border border-white/20 px-4 py-3 hover:bg-white/10">Get Started</Link>
+              <Link href="/sign-up" className="mt-6 inline-flex w-full items-center justify-center rounded-xl border border-border px-4 py-3 hover:bg-muted">Get Started</Link>
             </div>
           ))}
         </div>
@@ -184,8 +183,10 @@ export default function LandingPage() {
 
       {/* FAQ */}
       <section id="faq" className="container mx-auto px-4 py-20">
-        <h2 className="text-3xl md:text-4xl font-bold text-center">Frequently asked questions</h2>
-        <div className="mx-auto mt-8 max-w-3xl divide-y divide-white/10 rounded-2xl border border-white/10 bg-white/5">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold">Frequently asked questions</h2>
+        </div>
+        <div className="mx-auto max-w-3xl divide-y divide-border rounded-2xl border border-border bg-card">
           {faqs.map((f, i) => (
             <details key={i} className="group p-6">
               <summary className="flex cursor-pointer list-none items-center justify-between text-left text-lg font-medium">

@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { calculateProfileCompletion } from "@/lib/utils/profile";
 import "@/styles/interview-form.css";
 
 interface InterviewFormProps {
@@ -15,6 +17,9 @@ interface InterviewFormProps {
 export default function InterviewForm({ userId, userName }: InterviewFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingProfile, setIsCheckingProfile] = useState(true);
+  const [profileComplete, setProfileComplete] = useState(false);
+  const [profileCompletion, setProfileCompletion] = useState({ completed: false, percentage: 0, missingFields: [] as string[] });
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({
     role: "",
@@ -24,7 +29,32 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
     amount: 5
   });
 
-  // Job role options by interview type to reflect trained data coverage
+  // Check profile completion on mount
+  useEffect(() => {
+    const checkProfile = async () => {
+      try {
+        // Fetch user profile
+        const response = await fetch(`/api/profile/check?userId=${userId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+          const completion = calculateProfileCompletion(result.profile || {});
+          setProfileCompletion(completion);
+          setProfileComplete(completion.completed);
+        }
+      } catch (error) {
+        console.error('Error checking profile:', error);
+      } finally {
+        setIsCheckingProfile(false);
+      }
+    };
+
+    if (userId) {
+      checkProfile();
+    }
+  }, [userId]);
+
+  // Job role options by interview type (simplified to Technical and Non-Technical)
   const rolesByType: Record<string, string[]> = {
     Technical: [
       "Frontend Developer", "Backend Developer", "Full Stack Developer", "DevOps Engineer",
@@ -32,20 +62,9 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
       "Mobile Developer", "QA Engineer", "Cloud Engineer", "Security Engineer",
       "Database Administrator", "Solution Architect", "System Administrator", "Other"
     ],
-    "System Design": [
-      "Backend Developer", "Full Stack Developer", "Solution Architect", "Cloud Engineer",
-      "Technical Lead", "Engineering Manager", "System Administrator", "Software Engineer"
-    ],
-    Behavioral: [
-      "Software Engineer", "Product Manager", "Engineering Manager", "Technical Lead",
-      "Data Scientist", "Backend Developer", "Frontend Developer"
-    ],
-    "Case Study": [
-      "Product Manager", "Data Scientist", "Engineering Manager", "Technical Lead"
-    ],
-    Mixed: [
-      "Software Engineer", "Full Stack Developer", "Backend Developer", "Frontend Developer",
-      "Product Manager", "Engineering Manager"
+    "Non-Technical": [
+      "Product Manager", "Engineering Manager", "Technical Lead", "Solution Architect",
+      "System Administrator", "QA Engineer", "Other"
     ]
   };
 
@@ -143,13 +162,10 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
     return roleTechStacks[role as keyof typeof roleTechStacks] || roleTechStacks["Other"];
   };
 
-  // Interview type options
+  // Interview type options (only Technical and Non-Technical)
   const interviewTypes = [
     { value: "Technical", label: "Technical Interview", description: "Focus on coding, algorithms, and technical skills" },
-    { value: "Behavioral", label: "Behavioral Interview", description: "Focus on past experiences, teamwork, and problem-solving" },
-    { value: "System Design", label: "System Design Interview", description: "Focus on architecture, scalability, and system thinking" },
-    { value: "Case Study", label: "Case Study Interview", description: "Focus on business problems and analytical thinking" },
-    { value: "Mixed", label: "Mixed Interview", description: "Combination of technical and behavioral questions" }
+    { value: "Non-Technical", label: "Non-Technical Interview", description: "Focus on behavioral, soft skills, and communication" }
   ];
 
   // Experience level options
@@ -175,6 +191,14 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Block submission if profile is incomplete
+    if (!profileComplete) {
+      alert(`Please complete your profile first (${profileCompletion.percentage}% complete). Missing: ${profileCompletion.missingFields.join(', ')}`);
+      router.push('/profile');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -185,6 +209,8 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
         },
         body: JSON.stringify({
           ...formData,
+          // Map Non-Technical → Behavioral for the generator
+          type: formData.type === "Non-Technical" ? "Behavioral" : "Technical",
           userid: userId,
         }),
       });
@@ -217,7 +243,7 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
   };
 
   // Helper: whether tech stack applies for selected type
-  const isTechStackApplicable = !/^(Behavioral|Case Study)$/i.test(String(formData.type || ""));
+  const isTechStackApplicable = !/^Non-Technical$/i.test(String(formData.type || ""));
 
   const nextStep = () => {
     if (currentStep < steps.length - 1) {
@@ -269,7 +295,7 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
                   }`}
                   onClick={() => {
                     handleInputChange("type", type.value);
-                    if (/^(Behavioral|Case Study)$/i.test(type.value)) {
+                    if (type.value === "Non-Technical") {
                       handleInputChange("techstack", "");
                     }
                   }}
@@ -286,7 +312,7 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                         </svg>
                       )}
-                      {type.value === "Behavioral" && (
+                      {type.value === "Non-Technical" && (
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
@@ -614,7 +640,7 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
             
             <Button
               type="submit"
-              disabled={isLoading || !formData.role}
+              disabled={isLoading || !formData.role || !profileComplete}
               className="group w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-6 text-xl rounded-2xl transition-all duration-300 shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 disabled:shadow-none"
             >
               {isLoading ? (
@@ -715,6 +741,45 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
           </div>
         </div>
 
+        {/* Profile Completion Warning */}
+        {isCheckingProfile ? (
+          <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-4 mb-6">
+            <p className="text-yellow-200">Checking profile completion...</p>
+          </div>
+        ) : !profileComplete ? (
+          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-6 mb-6">
+            <div className="flex items-start gap-4">
+              <AlertCircle className="h-6 w-6 text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-red-200 mb-2">
+                  Profile Incomplete - Cannot Create Interview
+                </h3>
+                <p className="text-red-300 mb-3">
+                  Please complete your profile ({profileCompletion.percentage}% complete) to create interviews and receive accurate success predictions.
+                </p>
+                {profileCompletion.missingFields.length > 0 && (
+                  <p className="text-sm text-red-400 mb-4">
+                    Missing fields: <strong>{profileCompletion.missingFields.join(', ')}</strong>
+                  </p>
+                )}
+                <Button
+                  onClick={() => router.push('/profile')}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Complete Profile
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4 mb-6">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-400" />
+              <p className="text-green-200">Profile complete! You can create interviews.</p>
+            </div>
+          </div>
+        )}
+
         {/* Enhanced Step Content */}
         <form onSubmit={handleSubmit}>
           <div className="bg-gradient-to-br from-dark-200/80 to-dark-300/80 backdrop-blur-sm rounded-3xl border border-primary-200/20 p-8 md:p-12 mb-8 shadow-2xl">
@@ -728,7 +793,7 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
             <Button
               type="button"
               onClick={prevStep}
-              disabled={currentStep === 0}
+              disabled={currentStep === 0 || !profileComplete}
               className="group px-8 py-4 bg-gray-600/80 hover:bg-gray-700/80 disabled:bg-gray-800/50 disabled:text-gray-500 text-white rounded-xl transition-all duration-300 backdrop-blur-sm border border-gray-500/20 disabled:border-gray-700/20"
             >
               <svg className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -741,7 +806,7 @@ export default function InterviewForm({ userId, userName }: InterviewFormProps) 
               <Button
                 type="button"
                 onClick={nextStep}
-                disabled={currentStep === 0 && !formData.type}
+                disabled={!profileComplete || (currentStep === 0 && !formData.type)}
                 className="group px-8 py-4 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 disabled:from-gray-600 disabled:to-gray-700 text-white rounded-xl transition-all duration-300 shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 disabled:shadow-none"
               >
                 Next

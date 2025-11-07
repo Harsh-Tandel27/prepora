@@ -537,17 +537,6 @@ export default function VoiceInterview({ questions, userName, onComplete, interv
     }
   }, [interviewState.phase, stopListening, moveToNextQuestion]);
 
-  // Add pause manually
-  const addPause = useCallback(() => {
-    if (interviewState.phase === 'listening') {
-      setCurrentAnswer(prev => {
-        if (prev && !prev.endsWith(' -- ')) {
-          return prev + ' -- ';
-        }
-        return prev;
-      });
-    }
-  }, [interviewState.phase]);
 
 
 
@@ -563,18 +552,12 @@ export default function VoiceInterview({ questions, userName, onComplete, interv
         if (interviewState.phase === 'listening') {
           skipQuestion();
         }
-      } else if (event.key === ' ' && event.ctrlKey) {
-        // Ctrl+Space to add pause
-        event.preventDefault();
-        if (interviewState.phase === 'listening') {
-          addPause();
-        }
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [interviewState.phase, currentAnswer, submitAnswer, skipQuestion, addPause]);
+  }, [interviewState.phase, currentAnswer, submitAnswer, skipQuestion]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -812,15 +795,6 @@ export default function VoiceInterview({ questions, userName, onComplete, interv
                     <span>Next Question</span>
                   </button>
                   
-                  <button
-                    onClick={addPause}
-                    className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center space-x-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Add Pause (--)</span>
-                  </button>
                   
                   <button
                     onClick={() => setCurrentAnswer('')}
@@ -836,7 +810,7 @@ export default function VoiceInterview({ questions, userName, onComplete, interv
               
               {/* Keyboard Shortcuts */}
               <div className="mt-4 text-xs text-gray-400">
-                <p>💡 Tip: Press Enter to submit answer, Esc to skip question, Ctrl+Space to add pause (--)</p>
+                <p>💡 Tip: Press Enter to submit answer, Esc to skip question</p>
               </div>
             </div>
           </div>

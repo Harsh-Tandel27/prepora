@@ -105,7 +105,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
   return (
     <div className="relative max-w-md mx-auto">
       {/* Glassmorphism Card */}
-      <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl shadow-[0_10px_40px_-10px_rgba(124,58,237,0.6)] p-8 w-full">
+      <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl shadow-lg p-8 w-full">
         {/* Logo and Brand */}
         <div className="text-center mb-8">
           <div className="flex flex-row gap-3 justify-center items-center mb-4">
@@ -113,7 +113,6 @@ const AuthForm = ({ type }: { type: FormType }) => {
               <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
                 <Image src="/logo.svg" alt="logo" height={28} width={32} className="filter brightness-0 invert" />
               </div>
-              <div className="absolute -inset-1 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl blur opacity-30"></div>
             </div>
             <h2 className="text-3xl font-bold text-white">
               Prepora

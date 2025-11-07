@@ -1,29 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function DebugMLPage() {
-  const sampleTranscript = `Interviewer: Tell me about yourself.
-Candidate: I'm a software engineer with five years of experience in TypeScript, React, and Node.js. I focus on building scalable, reliable systems and mentoring teammates.
+  // Test samples specifically designed for speech analysis
+  // These focus on speech patterns: filler words, repetition, pauses, vocabulary, structure
 
-Interviewer: How do you approach problem solving?
-Candidate: I clarify the problem, list constraints, propose an initial approach, and validate with examples. I start with a simple solution and then optimize. For example, I might move from O(n^2) to O(n log n) by using sorting, or O(n) with a hash map.
-
-Interviewer: How would you scale an API that gets slow under load?
-Candidate: I'd measure with tracing, identify hotspots, and apply caching using Redis, add database indexes, and introduce a queue for heavy work. I'd also use autoscaling and circuit breakers.
-
-Interviewer: Describe a recent technical project.
-Candidate: I led a feature that reduced TTFB by 35% using edge caching and pre-computation. We designed the service with clean architecture, added observability, and wrote integration tests.`;
-
-  const weakTranscript = `Uh, so, like, I'm a developer and I, you know, build stuff.
-I guess I solve problems by trying different things until something works.
-If an API is slow, I'd probably, um, restart the server or maybe increase the instance size.
-For algorithms, I usually just write whatever comes to mind and then hope it passes tests.
-Teamwork is fine, I prefer to work alone.
-I don't really use metrics or anything; I just ship and see what happens.
-Like, yeah, that’s basically it.`;
-
-  const [transcript, setTranscript] = useState(sampleTranscript);
+  const [transcript, setTranscript] = useState("");
   const [role, setRole] = useState("Software Engineer");
   const [level, setLevel] = useState("Mid");
   const [techstack, setTechstack] = useState("TypeScript, React, Node.js");
@@ -32,30 +15,304 @@ Like, yeah, that’s basically it.`;
   const [error, setError] = useState<string | null>(null);
   const [requestPayload, setRequestPayload] = useState<any>(null);
   const [responseStatus, setResponseStatus] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string>("debug-user-12345678901234567890"); // Valid UID format for debug
+  const [profileStatus, setProfileStatus] = useState<any>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 
-  // Additional realistic presets for quick comparative testing
-  const presets: { name: string; text: string }[] = [
+  // Speech analysis test presets - designed to test different aspects of speech quality
+  const presets: { name: string; text: string; description: string }[] = [
     {
-      name: "Excellent (Structured, Technical)",
-      text: `I start by clarifying requirements and constraints, then propose a baseline design with clear trade-offs. For scaling, I'd add read replicas, caching layers (Redis), and queues for background jobs. I'd also add tracing (OpenTelemetry) to identify bottlenecks and apply indexing or query optimizations where needed. For an array problem, I'd pick the optimal data structure first; for example, use a sliding window or hash map to get O(n). I communicate my approach, validate with examples, and iterate. I document decisions and add tests to guard regressions.`,
+      name: "Best - Excellent Speech",
+      description: "No fillers, varied vocabulary, excellent structure, no repetition",
+      text: `I approach problem-solving systematically by first understanding requirements and constraints. Then I design a solution architecture considering scalability, maintainability, and performance trade-offs. For instance, when optimizing an API, I implement caching strategies, database indexing, and asynchronous processing. I communicate technical decisions clearly to stakeholders, document architectural choices, and validate solutions through comprehensive testing. My methodology emphasizes iterative refinement and continuous improvement based on metrics and feedback.`,
     },
     {
-      name: "Good (Solid but brief)",
-      text: `Typically I outline the approach, consider edge cases, and then code a simple version before optimizing. I've improved API latency by adding caching and database indexes. I collaborate with stakeholders and communicate trade-offs, like consistency versus latency. For algorithms, I choose data structures to minimize complexity, and I test with small cases.`,
+      name: "Good - Solid Speech",
+      description: "Minimal fillers, good vocabulary, well-structured, occasional repetition",
+      text: `I typically start by analyzing the problem requirements and identifying key constraints. Then I design an initial solution approach, considering different implementation strategies. For performance optimization, I focus on caching mechanisms, database query improvements, and efficient algorithms. I communicate my approach to team members and document important decisions. I test the solution thoroughly and iterate based on results.`,
     },
     {
-      name: "Average (Some gaps)",
-      text: `I usually try a solution and refine it if it's slow. For performance issues, I would try increasing resources and maybe add a cache. I explain the solution but sometimes skip writing tests due to time. I can improve at measuring impact and planning optimizations systematically.`,
+      name: "Average - Moderate Speech",
+      description: "Some fillers, average vocabulary, decent structure, some repetition",
+      text: `I usually try to understand the problem first, then I think about possible solutions. I might try a few different approaches to see what works best. For performance, I would add caching and maybe optimize some queries. I explain what I'm doing to the team and write some tests. Sometimes I need to go back and fix things if they don't work as expected.`,
     },
     {
-      name: "Rambling (Filler-heavy)",
-      text: `Um, like, I basically start coding and then, you know, if it doesn't work, I try something else. I mean, performance is important, but, like, I think we can just, you know, add more servers. For communication, I usually just say what I did. So, yeah, that's kind of my approach.`,
+      name: "Weak - Poor Speech",
+      description: "Many fillers, repetitive words, poor structure, limited vocabulary",
+      text: `Um, so like, I usually, you know, try to solve the problem. I mean, I start coding and then, like, if it doesn't work, I try something else. You know, I think performance is important, but, um, I usually just, like, add more servers or something. I mean, I explain things to people, but, you know, sometimes it's hard to, like, explain technical stuff. So yeah, that's basically, um, how I do things.`,
     },
     {
-      name: "Very Short (Insufficient detail)",
-      text: `I solve problems. I know React. I can code.`,
+      name: "Very Weak - Extremely Poor Speech",
+      description: "Excessive fillers, heavy repetition, many pauses, very poor structure",
+      text: `Uh, so, um, like, I guess I, you know, I try to, um, solve problems. Like, I code stuff and, um, you know, if it works, great. If not, um, I try again. I mean, like, performance is, you know, important, but, um, I don't really, like, think about it too much. I just, you know, code and hope it works. Um, yeah, that's, like, my approach.`,
+    },
+    {
+      name: "Repetition Heavy",
+      description: "Tests repetition detection - same words repeated many times",
+      text: `I solve problems by solving them systematically. When I solve a problem, I think about the problem carefully. The problem requires understanding the problem domain. My problem-solving approach involves breaking down the problem into smaller problems. Each problem gets solved individually until the entire problem is solved.`,
+    },
+    {
+      name: "Pause Heavy",
+      description: "Tests pause detection - many hesitation markers",
+      text: `I approach development -- by first understanding -- the requirements. Then I design -- a solution architecture -- considering various factors. For optimization -- I implement caching -- and database improvements. I communicate -- technical decisions -- to the team.`,
+    },
+    {
+      name: "Short Response",
+      description: "Tests minimum word threshold - very brief answer",
+      text: `I code. I test. I deploy.`,
     },
   ];
+
+  // Fetch real user ID if logged in and check profile status
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.user?.id) {
+            const realUserId = data.user.id;
+            setUserId(realUserId);
+            // Check profile status
+            checkProfileStatus(realUserId);
+          } else {
+            // Use default debug user ID
+            checkProfileStatus(userId);
+          }
+        } else {
+          // Use default debug user ID
+          checkProfileStatus(userId);
+        }
+      } catch (error) {
+        console.log('Debug mode: Using default debug user ID');
+        checkProfileStatus(userId);
+      }
+    };
+    fetchUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
+
+  const checkProfileStatus = async (uid: string) => {
+    setIsLoadingProfile(true);
+    try {
+      const response = await fetch(`/api/profile/check?userId=${uid}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setProfileStatus(data);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking profile:', error);
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+
+  // User profile templates from best to worst scores
+  const profileTemplates = [
+    {
+      name: "🏆 Best - Ideal Candidate",
+      description: "Experienced, educated, employed, willing to relocate",
+      profile: {
+        age: 30,
+        gender: 'Male',
+        education: 'M.E / M-Tech',
+        maritalStatus: 'Unmarried',
+        currentlyEmployed: true,
+        experienceMonths: 60,
+        willingToRelocate: true,
+        hasAcquaintance: false,
+      }
+    },
+    {
+      name: "⭐ Excellent - Strong Candidate",
+      description: "Good experience, well-educated, flexible",
+      profile: {
+        age: 28,
+        gender: 'Male',
+        education: 'B.E / B-Tech',
+        maritalStatus: 'Unmarried',
+        currentlyEmployed: true,
+        experienceMonths: 48,
+        willingToRelocate: true,
+        hasAcquaintance: false,
+      }
+    },
+    {
+      name: "✅ Good - Solid Candidate",
+      description: "Moderate experience, good education",
+      profile: {
+        age: 26,
+        gender: 'Male',
+        education: 'B.E / B-Tech',
+        maritalStatus: 'Unmarried',
+        currentlyEmployed: true,
+        experienceMonths: 36,
+        willingToRelocate: true,
+        hasAcquaintance: false,
+      }
+    },
+    {
+      name: "👍 Average - Decent Candidate",
+      description: "Some experience, basic education",
+      profile: {
+        age: 25,
+        gender: 'Male',
+        education: 'BSc or MSc',
+        maritalStatus: 'Unmarried',
+        currentlyEmployed: false,
+        experienceMonths: 24,
+        willingToRelocate: false,
+        hasAcquaintance: false,
+      }
+    },
+    {
+      name: "⚠️ Below Average - Weak Candidate",
+      description: "Limited experience, basic education, not flexible",
+      profile: {
+        age: 23,
+        gender: 'Female',
+        education: 'BA/MA',
+        maritalStatus: 'Married',
+        currentlyEmployed: false,
+        experienceMonths: 12,
+        willingToRelocate: false,
+        hasAcquaintance: false,
+      }
+    },
+    {
+      name: "❌ Poor - Very Weak Candidate",
+      description: "Minimal experience, lower education, constraints",
+      profile: {
+        age: 22,
+        gender: 'Female',
+        education: 'B.com (Bachelor of commerce)',
+        maritalStatus: 'Married',
+        currentlyEmployed: false,
+        experienceMonths: 6,
+        willingToRelocate: false,
+        hasAcquaintance: false,
+      }
+    },
+    {
+      name: "🔴 Worst - Extremely Weak Candidate",
+      description: "No experience, basic education, many constraints",
+      profile: {
+        age: 21,
+        gender: 'Female',
+        education: 'B.com (Bachelor of commerce)',
+        maritalStatus: 'Married',
+        currentlyEmployed: false,
+        experienceMonths: 0,
+        willingToRelocate: false,
+        hasAcquaintance: false,
+      }
+    }
+  ];
+
+  const createCompleteProfile = async () => {
+    setIsLoadingProfile(true);
+    try {
+      const completeProfile = {
+        age: 28,
+        gender: 'Male',
+        education: 'B.E / B-Tech',
+        maritalStatus: 'Unmarried',
+        currentlyEmployed: true,
+        experienceMonths: 36,
+        willingToRelocate: true,
+        hasAcquaintance: false,
+      };
+
+      const response = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          profile: completeProfile,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Complete profile created successfully!');
+          checkProfileStatus(userId);
+        }
+      }
+    } catch (error) {
+      console.error('Error creating profile:', error);
+      alert('❌ Failed to create profile');
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+
+  const applyProfileTemplate = async (template: typeof profileTemplates[0]) => {
+    setIsLoadingProfile(true);
+    try {
+      const response = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          profile: template.profile,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          alert(`✅ ${template.name} profile applied!`);
+          checkProfileStatus(userId);
+        }
+      }
+    } catch (error) {
+      console.error('Error applying profile template:', error);
+      alert('❌ Failed to apply profile template');
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+
+  const clearProfile = async () => {
+    setIsLoadingProfile(true);
+    try {
+      const emptyProfile = {
+        age: null,
+        gender: null,
+        education: null,
+        maritalStatus: null,
+        currentlyEmployed: null,
+        experienceMonths: null,
+        willingToRelocate: null,
+        hasAcquaintance: null,
+      };
+
+      const response = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          profile: emptyProfile,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          alert('✅ Profile cleared!');
+          checkProfileStatus(userId);
+        }
+      }
+    } catch (error) {
+      console.error('Error clearing profile:', error);
+      alert('❌ Failed to clear profile');
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
 
   const runAnalysis = async () => {
     setLoading(true);
@@ -63,19 +320,34 @@ Like, yeah, that’s basically it.`;
     setError(null);
 
     try {
-      const messages = transcript
-        .split(/\n|\./)
-        .map((s, i) => ({
-          role: "candidate" as const,
-          content: s.trim(),
-          timestamp: new Date().toISOString(),
-          questionIndex: Math.floor(i / 2),
-        }))
-        .filter((m) => m.content.length > 0);
+      // Extract candidate responses from transcript
+      // Handle both "Interviewer: ... Candidate: ..." format and plain text
+      const candidateText = transcript
+        .split(/\n/)
+        .filter(line => {
+          const trimmed = line.trim();
+          return trimmed && !trimmed.toLowerCase().startsWith('interviewer:');
+        })
+        .map(line => line.replace(/^candidate:\s*/i, '').trim())
+        .filter(line => line.length > 0)
+        .join(' ') || transcript.trim();
+
+      // Create messages array - split into sentences for better analysis
+      const sentences = candidateText
+        .split(/[.!?]+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+      const messages = sentences.map((content, i) => ({
+        role: "candidate" as const,
+        content: content,
+        timestamp: new Date().toISOString(),
+        questionIndex: Math.floor(i / 3), // Group every 3 sentences as one answer
+      }));
 
       const payload = {
         interviewId: "debug-interview",
-        userId: "debug-user",
+        userId: userId,
         transcript: messages,
         interviewData: {
           role,
@@ -109,8 +381,99 @@ Like, yeah, that’s basically it.`;
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold text-white">Debug ML Analysis</h1>
-      <p className="text-white/80">Paste or edit a human-like answer transcript and run the analysis.</p>
+      <h1 className="text-3xl font-bold text-white">ML Models Debug Tool</h1>
+      <p className="text-white/80">
+        Test the speech analyzer and interview predictor with different speech patterns and profile states.
+        The analyzer evaluates: filler words, repetition, pauses, vocabulary diversity, and sentence structure.
+      </p>
+
+      {/* Profile Status Section */}
+      <div className="p-4 rounded-lg border border-white/20 bg-white/5 text-white space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Profile Status</h2>
+          <button
+            onClick={() => checkProfileStatus(userId)}
+            disabled={isLoadingProfile}
+            className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-sm disabled:opacity-60"
+          >
+            {isLoadingProfile ? "Loading..." : "Refresh"}
+          </button>
+        </div>
+        
+        <div className="grid gap-2 md:grid-cols-2">
+          <div>
+            <div className="text-sm text-white/70">User ID:</div>
+            <div className="text-sm font-mono break-all">{userId}</div>
+          </div>
+          {profileStatus && (
+            <>
+              <div>
+                <div className="text-sm text-white/70">Profile Completion:</div>
+                <div className={`text-sm font-semibold ${profileStatus.completion?.completed ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {profileStatus.completion?.completed ? '✅ Complete' : '⚠️ Incomplete'} ({profileStatus.completion?.percentage || 0}%)
+                </div>
+              </div>
+              {profileStatus.completion?.missingFields && profileStatus.completion.missingFields.length > 0 && (
+                <div className="md:col-span-2">
+                  <div className="text-sm text-white/70">Missing Fields:</div>
+                  <div className="text-sm text-yellow-300">
+                    {profileStatus.completion.missingFields.join(', ')}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="flex gap-3 pt-2 border-t border-white/10">
+          <button
+            onClick={createCompleteProfile}
+            disabled={isLoadingProfile}
+            className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white text-sm font-medium disabled:opacity-60"
+          >
+            Create Complete Profile
+          </button>
+          <button
+            onClick={clearProfile}
+            disabled={isLoadingProfile}
+            className="px-4 py-2 rounded bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium disabled:opacity-60"
+          >
+            Clear Profile (Test Incomplete)
+          </button>
+        </div>
+      </div>
+
+      {/* Profile Templates Section */}
+      <div className="p-4 rounded-lg border border-white/20 bg-white/5 text-white space-y-3">
+        <h2 className="text-xl font-semibold">Profile Templates (Best to Worst Scores)</h2>
+        <p className="text-sm text-white/70">
+          Apply different profile templates to test how they affect interview prediction scores.
+          Templates are ordered from best (highest expected score) to worst (lowest expected score).
+        </p>
+        
+        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+          {profileTemplates.map((template, index) => (
+            <button
+              key={index}
+              onClick={() => applyProfileTemplate(template)}
+              disabled={isLoadingProfile}
+              className="p-3 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 text-left text-sm disabled:opacity-60 transition-colors"
+              title={template.description}
+            >
+              <div className="font-semibold text-white mb-1">{template.name}</div>
+              <div className="text-xs text-white/70 mb-2">{template.description}</div>
+              <div className="text-xs text-white/60 space-y-0.5">
+                <div>Age: {template.profile.age} | Exp: {template.profile.experienceMonths}mo</div>
+                <div>Edu: {template.profile.education}</div>
+                <div>
+                  {template.profile.currentlyEmployed ? '✅ Employed' : '❌ Unemployed'} | 
+                  {template.profile.willingToRelocate ? ' ✅ Relocate' : ' ❌ No Relocate'}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <label className="text-white/90">Role
@@ -132,39 +495,40 @@ Like, yeah, that’s basically it.`;
         />
       </div>
 
-      <div className="flex gap-3 flex-wrap">
-        <button
-          onClick={() => setTranscript(sampleTranscript)}
-          disabled={loading}
-          className="px-6 py-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold disabled:opacity-60"
-        >
-          Use Sample Responses
-        </button>
-        <button
-          onClick={() => setTranscript(weakTranscript)}
-          disabled={loading}
-          className="px-6 py-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold disabled:opacity-60"
-        >
-          Use Weak Responses
-        </button>
-        {presets.map((p, i) => (
+      <div className="space-y-4">
+        <div className="flex gap-3 flex-wrap">
+          {presets.map((p, i) => (
+            <button
+              key={i}
+              onClick={() => setTranscript(p.text)}
+              disabled={loading}
+              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium disabled:opacity-60 border border-white/20"
+              title={p.description}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-3">
           <button
-            key={i}
-            onClick={() => setTranscript(p.text)}
+            onClick={runAnalysis}
+            disabled={loading || !transcript.trim()}
+            className="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {loading ? "Running Analysis..." : "Run Speech Analysis"}
+          </button>
+          <button
+            onClick={() => {
+              setTranscript("");
+              setResult(null);
+              setError(null);
+            }}
             disabled={loading}
             className="px-6 py-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold disabled:opacity-60"
-            title={p.text.slice(0, 120) + (p.text.length > 120 ? '…' : '')}
           >
-            {p.name}
+            Clear
           </button>
-        ))}
-        <button
-          onClick={runAnalysis}
-          disabled={loading}
-          className="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold disabled:opacity-60"
-        >
-          {loading ? "Running..." : "Run Analysis"}
-        </button>
+        </div>
       </div>
 
       {error && (
@@ -174,9 +538,76 @@ Like, yeah, that’s basically it.`;
       )}
 
       {result && (
-        <div className="mt-4 p-4 rounded-lg border border-white/20 bg-white/5 text-white space-y-2">
-          <div className="text-lg font-semibold">Score: {result?.feedback?.totalScore ?? "N/A"}/100</div>
-          <pre className="whitespace-pre-wrap text-sm text-white/90">{JSON.stringify(result, null, 2)}</pre>
+        <div className="mt-4 p-4 rounded-lg border border-white/20 bg-white/5 text-white space-y-4">
+          <div className="text-lg font-semibold">
+            Overall Score: {result?.feedback?.totalScore ?? result?.totalScore ?? "N/A"}/100
+          </div>
+          
+          {(result?.feedback?.categoryScores || result?.categoryScores) && (
+            <div className="space-y-2">
+              <h3 className="font-semibold text-white/90">Category Scores:</h3>
+              {(result.feedback?.categoryScores || result.categoryScores || []).map((cat: any, i: number) => (
+                <div key={i} className="pl-4 border-l-2 border-white/20">
+                  <div className="font-medium">{cat.name}: {cat.score}/100</div>
+                  <div className="text-sm text-white/70">{cat.comment}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Prediction Status */}
+          {result?.warning && (
+            <div className="p-3 rounded bg-yellow-500/10 border border-yellow-400/40 text-yellow-300 text-sm">
+              ⚠️ {result.warning}
+            </div>
+          )}
+          
+          {result?.feedback?.mlAnalysis?.interviewPrediction && (
+            <div className="space-y-2">
+              <h3 className="font-semibold text-green-400">✅ Interview Prediction (Profile Complete):</h3>
+              {(() => {
+                const prediction = result.feedback.mlAnalysis.interviewPrediction;
+                return (
+                  <div className="pl-4 space-y-1 text-sm">
+                    <div>Success Probability: {(prediction.success_probability * 100 || 0).toFixed(1)}%</div>
+                    <div>Predicted Success: {prediction.predicted_success ? '✅ Yes' : '❌ No'}</div>
+                    <div>Overall Score: {prediction.overall_score || 'N/A'}/100</div>
+                    <div>Model Used: {prediction.model_used || 'N/A'}</div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {!result?.feedback?.mlAnalysis?.interviewPrediction && !result?.warning && (
+            <div className="p-3 rounded bg-yellow-500/10 border border-yellow-400/40 text-yellow-300 text-sm">
+              ⚠️ Interview prediction not available (profile incomplete)
+            </div>
+          )}
+
+          {(result?.feedback?.mlAnalysis?.speechAnalysis || result?.mlAnalysis?.speechAnalysis) && (
+            <div className="space-y-2">
+              <h3 className="font-semibold text-white/90">Speech Analysis Details:</h3>
+              {(() => {
+                const speechAnalysis = result.feedback?.mlAnalysis?.speechAnalysis || result.mlAnalysis?.speechAnalysis;
+                return (
+                  <div className="pl-4 space-y-1 text-sm">
+                    <div>Quality Score: {speechAnalysis.quality_score}/100</div>
+                    <div>Confidence Score: {speechAnalysis.confidence_score}/100</div>
+                    <div>Filler Rate: {(speechAnalysis.filler_word_analysis?.filler_rate * 100 || 0).toFixed(1)}%</div>
+                    <div>Repetition Rate: {(speechAnalysis.repetition_analysis?.repetition_rate * 100 || 0).toFixed(1)}%</div>
+                    <div>Pause Rate: {(speechAnalysis.pause_analysis?.pause_rate * 100 || 0).toFixed(1)}%</div>
+                    <div>Vocabulary Diversity: {(speechAnalysis.vocabulary_analysis?.diversity * 100 || 0).toFixed(1)}%</div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          <details className="mt-4">
+            <summary className="cursor-pointer text-sm text-white/70 hover:text-white/90">View Full JSON Response</summary>
+            <pre className="mt-2 whitespace-pre-wrap text-xs text-white/60 overflow-auto max-h-96">{JSON.stringify(result, null, 2)}</pre>
+          </details>
         </div>
       )}
 

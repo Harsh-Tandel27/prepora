@@ -24,6 +24,26 @@ interface Interview {
   type: string;
   finalized: boolean;
   coverImage?: string;
+  transcript?: string;
+  analysis?: {
+    totalScore: number;
+    categoryScores: Array<{
+      name: string;
+      score: number;
+      comment: string;
+    }>;
+    strengths: string[];
+    areasForImprovement: string[];
+    finalAssessment: string;
+    mlAnalysis?: {
+      speechAnalysis: any;
+      interviewPrediction: any;
+      transcriptLength: number;
+      wordCount: number;
+    };
+    createdAt: string;
+  };
+  feedbackId?: string;
 }
 
 interface CreateFeedbackParams {
@@ -33,10 +53,25 @@ interface CreateFeedbackParams {
   feedbackId?: string;
 }
 
+interface UserProfile {
+  age: number | null;
+  gender: 'Male' | 'Female' | 'Other' | null;
+  education: string | null;
+  maritalStatus: 'Married' | 'Unmarried' | null;
+  currentlyEmployed: boolean | null;
+  experienceMonths: number | null;
+  willingToRelocate: boolean | null;
+  hasAcquaintance: boolean | null;
+  profileCompleted: boolean;
+  profileCompletionPercentage: number;
+}
+
 interface User {
   name: string;
   email: string;
   id: string;
+  profile?: UserProfile;
+  createdAt?: string;
 }
 
 interface InterviewCardProps {

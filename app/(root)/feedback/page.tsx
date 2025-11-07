@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/actions/auth.action";
 import { getInterviewsByUserId } from "@/lib/actions/general.action";
 import InterviewCard from "@/components/InterviewCard";
 import Link from "next/link";
+import { MessageCircle } from "lucide-react";
 
 const FeedbackPage = async () => {
   const user = await getCurrentUser();

@@ -8,6 +8,8 @@ import { Brain, Mic, Target, TrendingUp, TrendingDown, CheckCircle, AlertCircle,
 
 interface AnalysisResultsProps {
   transcript: string;
+  interviewId: string;
+  userId: string;
   interviewData: {
     role: string;
     level: string;
@@ -32,7 +34,7 @@ interface AnalysisData {
   isAnalyzing: boolean;
 }
 
-export default function AnalysisResults({ transcript, interviewData, onContinue, onRetake }: AnalysisResultsProps) {
+export default function AnalysisResults({ transcript, interviewId, userId, interviewData, onContinue, onRetake }: AnalysisResultsProps) {
   const [analysisData, setAnalysisData] = useState<AnalysisData>({
     speechAnalysis: null,
     interviewPrediction: null,
@@ -63,8 +65,8 @@ export default function AnalysisResults({ transcript, interviewData, onContinue,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          interviewId: 'temp-analysis',
-          userId: 'temp-user',
+          interviewId: interviewId,
+          userId: userId,
           transcript: transcript.split('.').map((sentence, index) => ({
             role: 'candidate' as const,
             content: sentence.trim(),
@@ -288,14 +290,6 @@ export default function AnalysisResults({ transcript, interviewData, onContinue,
                   <Badge variant={getScoreBadgeVariant((analysisData.interviewPrediction.success_probability || 0) * 100)}>
                     {((analysisData.interviewPrediction.success_probability || 0) * 100).toFixed(1)}%
                   </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300">Technical Score:</span>
-                  <span className="text-white">{analysisData.interviewPrediction.technical_score || 'N/A'}/100</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300">Communication Score:</span>
-                  <span className="text-white">{analysisData.interviewPrediction.communication_score || 'N/A'}/100</span>
                 </div>
               </div>
             </CardContent>

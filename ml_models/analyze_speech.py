@@ -29,23 +29,51 @@ def analyze_speech_with_ml(speech_text, duration=30.0):
         # Analyze speech
         analysis = analyzer.analyze_speech_text(speech_text, duration)
         
-        # Format response for frontend
+        # Format response for frontend (handle both old and new analysis formats)
+        filler_analysis = analysis.get('filler_word_analysis', {})
+        repetition_analysis = analysis.get('repetition_analysis', {})
+        pause_analysis = analysis.get('pause_analysis', {})
+        vocabulary_analysis = analysis.get('vocabulary_analysis', {})
+        structure_analysis = analysis.get('structure_analysis', {})
+        basic_metrics = analysis.get('basic_metrics', {})
+        
         formatted_analysis = {
             'quality_score': analysis.get('quality_score', 0),
+            'confidence_score': analysis.get('confidence_score', 0),
             'filler_word_analysis': {
-                'filler_count': analysis.get('filler_word_analysis', {}).get('filler_count', 0),
-                'filler_rate': analysis.get('filler_word_analysis', {}).get('filler_rate', 0),
-                'is_acceptable': analysis.get('filler_word_analysis', {}).get('is_acceptable', True)
+                'filler_count': filler_analysis.get('filler_count', 0),
+                'filler_rate': filler_analysis.get('filler_rate', 0),
+                'is_acceptable': filler_analysis.get('is_acceptable', True),
+                'severity': filler_analysis.get('severity', 'low')
             },
             'repetition_analysis': {
-                'repetition_count': analysis.get('repetition_analysis', {}).get('repetition_count', 0),
-                'repetition_rate': analysis.get('repetition_analysis', {}).get('repetition_rate', 0),
-                'is_acceptable': analysis.get('repetition_analysis', {}).get('is_acceptable', True)
+                'repetition_count': repetition_analysis.get('repetition_count', 0),
+                'repetition_rate': repetition_analysis.get('repetition_rate', 0),
+                'is_acceptable': repetition_analysis.get('is_acceptable', True),
+                'severity': repetition_analysis.get('severity', 'low')
+            },
+            'pause_analysis': {
+                'pause_count': pause_analysis.get('pause_count', 0),
+                'pause_rate': pause_analysis.get('pause_rate', 0),
+                'is_acceptable': pause_analysis.get('is_acceptable', True),
+                'severity': pause_analysis.get('severity', 'low')
+            },
+            'vocabulary_analysis': {
+                'diversity': vocabulary_analysis.get('diversity', basic_metrics.get('vocabulary_diversity', 0)),
+                'unique_count': vocabulary_analysis.get('unique_count', basic_metrics.get('unique_words', 0)),
+                'vocabulary_richness': vocabulary_analysis.get('vocabulary_richness', 'low')
+            },
+            'structure_analysis': {
+                'avg_length': structure_analysis.get('avg_length', basic_metrics.get('avg_sentence_length', 0)),
+                'structure_quality': structure_analysis.get('structure_quality', 'fair'),
+                'variety_score': structure_analysis.get('variety_score', 50)
             },
             'basic_metrics': {
-                'vocabulary_diversity': analysis.get('basic_metrics', {}).get('vocabulary_diversity', 0),
-                'unique_words': analysis.get('basic_metrics', {}).get('unique_words', 0),
-                'avg_sentence_length': analysis.get('basic_metrics', {}).get('avg_sentence_length', 0)
+                'word_count': basic_metrics.get('word_count', 0),
+                'sentence_count': basic_metrics.get('sentence_count', 0),
+                'vocabulary_diversity': vocabulary_analysis.get('diversity', basic_metrics.get('vocabulary_diversity', 0)),
+                'unique_words': vocabulary_analysis.get('unique_count', basic_metrics.get('unique_words', 0)),
+                'avg_sentence_length': structure_analysis.get('avg_length', basic_metrics.get('avg_sentence_length', 0))
             },
             'recommendations': analysis.get('recommendations', [])
         }

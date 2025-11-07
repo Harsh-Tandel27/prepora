@@ -1,6 +1,7 @@
 import { exec } from "child_process";
 import { promisify } from "util";
-import { db } from "@/firebase/admin";
+import { db, auth } from "@/firebase/admin";
+import { calculateProfileCompletion } from "@/lib/utils/profile";
 
 const execAsync = promisify(exec);
 
@@ -12,6 +13,21 @@ export async function POST(request: Request) {
     console.log('📊 Interview ID:', interviewId);
     console.log('👤 User ID:', userId);
     console.log('📝 Transcript length:', transcript?.length || 0);
+
+    // Validate required fields
+    if (!userId) {
+      return Response.json({ 
+        success: false, 
+        error: "User ID is required" 
+      }, { status: 400 });
+    }
+
+    if (!interviewId) {
+      return Response.json({ 
+        success: false, 
+        error: "Interview ID is required" 
+      }, { status: 400 });
+    }
 
     // Prepare transcript text for ML analysis
     const transcriptText = transcript
@@ -26,11 +42,180 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
+    // Fetch user profile from Firebase
+    console.log('🔍 Fetching user profile from Firebase...');
+    console.log('   User ID being searched:', userId);
+    console.log('   User ID type:', typeof userId);
+    console.log('   User ID length:', userId?.length);
+    
+    // Verify user exists in Firebase Auth first
+    let userExistsInAuth = false;
+    try {
+      await auth.getUser(userId);
+      userExistsInAuth = true;
+      console.log('✅ User verified in Firebase Auth');
+    } catch (authError: any) {
+      console.warn('⚠️ User not found in Firebase Auth:', authError?.code || authError?.message);
+      // Continue anyway - might be a debug user or edge case
+    }
+    
+    let userDoc = await db.collection("users").doc(userId).get();
+    
+    if (!userDoc.exists) {
+      console.log('⚠️ User document not found in Firestore');
+      console.log('   Searched for document ID:', userId);
+      console.log('   Collection: users');
+      console.log('   User exists in Auth:', userExistsInAuth);
+      
+      // If user exists in Auth, try to get their email and search by that
+      if (userExistsInAuth) {
+        try {
+          const authUser = await auth.getUser(userId);
+          if (authUser.email) {
+            console.log('   Attempting to find user by email:', authUser.email);
+            const emailQuery = await db.collection("users")
+              .where("email", "==", authUser.email)
+              .limit(1)
+              .get();
+            
+            if (!emailQuery.empty) {
+              const foundDoc = emailQuery.docs[0];
+              console.log('   ✅ Found user document with different ID:', foundDoc.id);
+              console.log('   ⚠️ Document ID mismatch - using found document');
+              userDoc = foundDoc;
+            } else {
+              console.log('   ⚠️ Data inconsistency: User exists in Auth but not in Firestore');
+            }
+          }
+        } catch (queryError) {
+          console.log('   Could not query by email:', queryError);
+        }
+      }
+      
+      // If still not found, proceed with creating default profile
+      if (!userDoc.exists) {
+        // Check if this is a test/debug user ID (allow temp-user, debug-user, etc.)
+        const isTestUserId = /^(temp|debug|test|demo)-/.test(userId) || userId.startsWith('temp-') || userId.startsWith('debug-');
+        
+        // Try to verify if this is a valid Firebase Auth UID format
+        // Firebase UIDs are typically 28 characters alphanumeric
+        const isValidUIDFormat = /^[a-zA-Z0-9]{20,}$/.test(userId);
+        
+        // Allow test users or valid UID format
+        if (!isTestUserId && !isValidUIDFormat) {
+          console.error('❌ Invalid user ID format:', userId);
+          return Response.json({ 
+            success: false, 
+            error: `Invalid user ID format: ${userId}. Please ensure you are logged in.`,
+          }, { status: 400 });
+        }
+        
+        // Create user document with default profile if it doesn't exist
+        // This can happen if user signed up before profile system was implemented
+        // or for test/debug users
+        const defaultProfile = {
+          age: null,
+          gender: null,
+          education: null,
+          maritalStatus: null,
+          currentlyEmployed: null,
+          experienceMonths: null,
+          willingToRelocate: null,
+          hasAcquaintance: null,
+          profileCompleted: false,
+          profileCompletionPercentage: 0
+        };
+        
+        try {
+          await db.collection("users").doc(userId).set({
+            profile: defaultProfile,
+            createdAt: new Date().toISOString(),
+          }, { merge: true });
+          
+          console.log('✅ Successfully created user document with default profile');
+          if (isTestUserId) {
+            console.log('   ℹ️ Test/debug user - profile will be incomplete');
+          }
+          userDoc = await db.collection("users").doc(userId).get();
+        } catch (createError) {
+          console.error('❌ Failed to create user document:', createError);
+          return Response.json({ 
+            success: false, 
+            error: `User not found and could not be created. User ID: ${userId}. Please contact support.`,
+          }, { status: 404 });
+        }
+      }
+    }
+    
+    const userData = userDoc.data();
+    const profileData = userData?.profile || {};
+    
+    // Debug: Log the actual profile data structure
+    console.log('🔍 Debugging profile data:');
+    console.log('   User document exists:', userDoc.exists);
+    console.log('   User data keys:', Object.keys(userData || {}));
+    console.log('   Profile data keys:', Object.keys(profileData));
+    console.log('   Profile data:', JSON.stringify(profileData, null, 2));
+    console.log('   Profile age:', profileData.age);
+    console.log('   Profile gender:', profileData.gender);
+    console.log('   Profile education:', profileData.education);
+    console.log('   Profile currentlyEmployed:', profileData.currentlyEmployed);
+    console.log('   Profile experienceMonths:', profileData.experienceMonths);
+    console.log('   Profile willingToRelocate:', profileData.willingToRelocate);
+    
+    // Recalculate profile completion to ensure accuracy
+    const completion = calculateProfileCompletion(profileData);
+    const isProfileComplete = completion.completed;
+    
+    console.log('📊 Profile completion check:');
+    console.log('   Stored profileCompleted:', profileData.profileCompleted);
+    console.log('   Calculated completion:', isProfileComplete);
+    console.log('   Completion percentage:', completion.percentage + '%');
+    console.log('   Missing fields:', completion.missingFields.length > 0 ? completion.missingFields : 'none');
+    
+    // Check if profile is complete
+    if (!isProfileComplete) {
+      console.warn('⚠️ Profile incomplete, skipping prediction');
+      // Still generate feedback but without prediction
+      const speechAnalysis = await analyzeSpeechWithML(transcriptText);
+      const feedback = await generateComprehensiveFeedback({
+        transcriptText,
+        speechAnalysis,
+        interviewPrediction: null, // No prediction available
+        interviewData,
+        interviewId,
+        userId
+      });
+      
+      const feedbackRef = await db.collection("feedback").add(feedback);
+      return Response.json({ 
+        success: true, 
+        feedbackId: feedbackRef.id,
+        feedback: feedback,
+        warning: "Profile incomplete - predictions not available"
+      }, { status: 200 });
+    }
+
     // Call ML models for comprehensive analysis
-    const [speechAnalysis, interviewPrediction] = await Promise.all([
-      analyzeSpeechWithML(transcriptText),
-      predictInterviewSuccess(transcriptText, interviewData)
-    ]);
+    const speechAnalysis = await analyzeSpeechWithML(transcriptText);
+    
+    // Get interview prediction (required - no fallback)
+    let interviewPrediction: any = null;
+    try {
+      interviewPrediction = await predictInterviewSuccess(
+        transcriptText, 
+        profileData, 
+        speechAnalysis, 
+        interviewData
+      );
+    } catch (predictionError) {
+      console.error('❌ Interview prediction failed:', predictionError);
+      // Return error - prediction is required
+      return Response.json({ 
+        success: false, 
+        error: `Interview prediction failed: ${predictionError instanceof Error ? predictionError.message : String(predictionError)}. Please ensure your profile is complete and the ML model is properly configured.`
+      }, { status: 500 });
+    }
 
     // Generate comprehensive feedback
     const feedback = await generateComprehensiveFeedback({
@@ -80,49 +265,71 @@ async function analyzeSpeechWithML(transcriptText: string) {
       console.error('Speech analysis stderr:', stderr);
     }
 
-    // Some environments may print extra logs before JSON; try to extract JSON object
+    // Parse JSON from Python output (tolerate prefixed logs)
     let parsed: any = null;
+    const trimmed = (stdout || '').trim();
     try {
-      const jsonMatch = stdout.match(/\{[\s\S]*\}$/);
-      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : stdout || '{}');
-    } catch {}
+      parsed = JSON.parse(trimmed);
+    } catch {
+      // Try the widest curly-brace slice first (from first '{' to last '}')
+      const firstBrace = trimmed.indexOf('{');
+      const lastBrace = trimmed.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        const wideSlice = trimmed.slice(firstBrace, lastBrace + 1);
+        try {
+          parsed = JSON.parse(wideSlice);
+        } catch {}
+      }
+      // If still not parsed, fallback to scanning all brace blocks and pick the longest parseable
+      if (!parsed) {
+        const candidates = trimmed.match(/\{[\s\S]*\}/g) || [];
+        let best: any = null;
+        let bestLen = -1;
+        for (const cand of candidates) {
+          try {
+            const obj = JSON.parse(cand);
+            if (cand.length > bestLen) {
+              best = obj;
+              bestLen = cand.length;
+            }
+          } catch {}
+        }
+        parsed = best;
+      }
+    }
     console.log('✅ Speech analysis completed');
-    
-    if (parsed && parsed.success) {
-      return parsed.analysis;
+    if (!parsed?.success || !parsed?.analysis) {
+      throw new Error(`Speech analyzer returned invalid result: ${trimmed.slice(0, 200)}`);
     }
-    if (parsed && parsed.analysis) {
-      // If script returned structure but without success flag
-      return parsed.analysis;
-    }
-    // Fallback to JS heuristic if Python didn't succeed
-    return simpleSpeechAnalysis(transcriptText);
+    return parsed.analysis;
   } catch (error) {
     console.error('❌ Speech analysis error:', error);
-    // Fallback to JS heuristic analysis
-    return simpleSpeechAnalysis(transcriptText);
+    throw error;
   }
 }
 
-async function predictInterviewSuccess(transcriptText: string, interviewData: any) {
+async function predictInterviewSuccess(
+  transcriptText: string, 
+  profileData: any, 
+  speechAnalysis: any, 
+  interviewData: any
+) {
   try {
-    console.log('🔮 Predicting interview success...');
+    console.log('🔮 Predicting interview success with ML model...');
     
-    // Prepare data for prediction
-    const predictionData = {
-      transcript: transcriptText,
-      role: interviewData?.role || 'Software Engineer',
-      level: interviewData?.level || 'Mid',
-      techstack: interviewData?.techstack || ['JavaScript'],
-      duration: 30 // Approximate duration in minutes
-    };
-
-    // interview_predictor.py does not expose a CLI that reads JSON; attempt, then fallback
+    // Prepare payload for Python script
+    const payload = JSON.stringify({
+      text: transcriptText,
+      profileData: profileData,
+      speechAnalysis: speechAnalysis,
+      interviewData: interviewData
+    }).replace(/"/g, '\\"');
+    
     const { stdout, stderr } = await execAsync(
-      `ml_models/venv_mac/bin/python -c "print('{}')"`,
+      `echo "${payload}" | ml_models/venv_mac/bin/python ml_models/interview_predictor.py`,
       {
         cwd: process.cwd(),
-        timeout: 5000
+        timeout: 30000
       }
     );
 
@@ -130,34 +337,58 @@ async function predictInterviewSuccess(transcriptText: string, interviewData: an
       console.error('Interview prediction stderr:', stderr);
     }
 
-    const prediction = JSON.parse(stdout || '{}');
+    // Parse JSON from Python output (same robust parsing as speech analyzer)
+    let parsed: any = null;
+    const trimmed = (stdout || '').trim();
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      // Try the widest curly-brace slice first
+      const firstBrace = trimmed.indexOf('{');
+      const lastBrace = trimmed.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        const wideSlice = trimmed.slice(firstBrace, lastBrace + 1);
+        try {
+          parsed = JSON.parse(wideSlice);
+        } catch {}
+      }
+      // If still not parsed, fallback to scanning all brace blocks
+      if (!parsed) {
+        const candidates = trimmed.match(/\{[\s\S]*\}/g) || [];
+        let best: any = null;
+        let bestLen = -1;
+        for (const cand of candidates) {
+          try {
+            const obj = JSON.parse(cand);
+            if (cand.length > bestLen) {
+              best = obj;
+              bestLen = cand.length;
+            }
+          } catch {}
+        }
+        parsed = best;
+      }
+    }
+
     console.log('✅ Interview prediction completed');
     
-    if (!prediction.success) return simpleInterviewPrediction(transcriptText, interviewData);
-    // Enrich with derived sub-scores if not present
-    const pred = prediction.prediction || {};
-    // Derive simple problem solving and communication scores heuristically when absent
-    if (pred.problem_solving_score == null) {
-      const psHints = ['approach','solution','step','process','method','strategy'];
-      const hits = psHints.filter(h => transcriptText.toLowerCase().includes(h)).length;
-      pred.problem_solving_score = Math.min(100, 50 + hits * 10);
+    if (!parsed?.success || !parsed?.prediction) {
+      const errorMsg = parsed?.error || 'ML prediction failed';
+      console.error('❌ ML prediction failed:', errorMsg);
+      throw new Error(`Interview prediction failed: ${errorMsg}`);
     }
-    if (pred.communication_score == null) {
-      // Backfill with success probability as proxy
-      const sp = (pred.success_probability || 0.5) * 100;
-      pred.communication_score = Math.round(0.6 * sp + 20);
-    }
-    if (pred.technical_score == null) {
-      const techHints = ['algorithm','data structure','optimization','scalability','architecture','design'];
-      const hits = techHints.filter(h => transcriptText.toLowerCase().includes(h)).length;
-      pred.technical_score = Math.min(100, 55 + hits * 8);
-    }
-    pred.overall_score = Math.round(((pred.technical_score || 60) + (pred.communication_score || 60) + ((pred.success_probability || 0.5) * 100)) / 3);
-    return pred;
+
+    // Format response to match expected structure
+    const pred = parsed.prediction;
+    return {
+      success_probability: pred.success_probability || 0.5,
+      overall_score: pred.overall_score || 50,
+      predicted_success: pred.predicted_success || false,
+      model_used: pred.model_used || 'unknown',
+    };
   } catch (error) {
     console.error('❌ Interview prediction error:', error);
-    // Fallback to JS heuristic prediction
-    return simpleInterviewPrediction(transcriptText, interviewData);
+    throw error; // Re-throw instead of falling back to heuristic
   }
 }
 
@@ -177,24 +408,47 @@ async function generateComprehensiveFeedback({
   userId: string;
 }) {
   // Calculate overall score from available ML metrics (avoid constant 50 fallback)
-  const scoreContributors: number[] = [];
+  // Cap all scores at 95 - no parameter should reach 100
   const speechQuality = typeof speechAnalysis?.quality_score === 'number'
-    ? speechAnalysis.quality_score
+    ? Math.max(0, Math.min(95, speechAnalysis.quality_score))
     : undefined;
   const predOverall = typeof interviewPrediction?.overall_score === 'number'
-    ? interviewPrediction.overall_score
+    ? Math.max(0, Math.min(95, interviewPrediction.overall_score))
     : undefined;
   const predSuccessProb = typeof interviewPrediction?.success_probability === 'number'
-    ? interviewPrediction.success_probability * 100
+    ? Math.max(0, Math.min(95, interviewPrediction.success_probability * 100))
     : undefined;
 
-  if (typeof speechQuality === 'number') scoreContributors.push(Math.max(0, Math.min(100, speechQuality)));
-  if (typeof predOverall === 'number') scoreContributors.push(Math.max(0, Math.min(100, predOverall)));
-  else if (typeof predSuccessProb === 'number') scoreContributors.push(Math.max(0, Math.min(100, predSuccessProb)));
-
-  const overallScore = scoreContributors.length
-    ? Math.round(scoreContributors.reduce((sum, n) => sum + n, 0) / scoreContributors.length)
-    : 50;
+  // Prefer model overall; otherwise use success prob; combine with speech via weights
+  // More generous scoring - give more weight to speech quality
+  let combinedModelScore: number | undefined = predOverall ?? predSuccessProb;
+  let overallScore: number;
+  if (combinedModelScore != null && speechQuality != null) {
+    // More generous weighting - favor speech quality more
+    if (speechQuality > 75 && combinedModelScore < 50) {
+      // Excellent speech but low prediction - favor speech (70% speech, 30% prediction)
+      overallScore = Math.round(0.7 * speechQuality + 0.3 * combinedModelScore);
+    } else if (speechQuality > 65 && combinedModelScore < 45) {
+      // Good speech but low prediction - favor speech (65% speech, 35% prediction)
+      overallScore = Math.round(0.65 * speechQuality + 0.35 * combinedModelScore);
+    } else if (speechQuality > 70) {
+      // Good speech - give it more weight (60% speech, 40% prediction)
+      overallScore = Math.round(0.6 * speechQuality + 0.4 * combinedModelScore);
+    } else {
+      // Balanced weighting but favor speech slightly (55% speech, 45% prediction)
+      overallScore = Math.round(0.55 * speechQuality + 0.45 * combinedModelScore);
+    }
+    // Cap overall score at 95
+    overallScore = Math.min(95, overallScore);
+  } else if (combinedModelScore != null) {
+    overallScore = Math.round(combinedModelScore);
+    overallScore = Math.min(95, overallScore);
+  } else if (speechQuality != null) {
+    overallScore = Math.round(speechQuality);
+    overallScore = Math.min(95, overallScore);
+  } else {
+    overallScore = 50;
+  }
 
   // Generate category scores
   const categoryScores = generateCategoryScores(speechAnalysis, interviewPrediction, transcriptText);
@@ -235,91 +489,56 @@ async function generateComprehensiveFeedback({
 function generateCategoryScores(speechAnalysis: any, interviewPrediction: any, transcriptText: string) {
   const baseScore = 50;
   
+  // Only show speech-related categories since we're only analyzing speech patterns
+  // Technical Knowledge and Problem-Solving require actual content analysis, not just speech
+  // All scores capped at 95 - no parameter should reach 100
+  
+  // Communication Skills - based on quality score, no scaling reduction
+  const commScore = speechAnalysis?.quality_score || baseScore;
+  const scaledCommScore = Math.min(95, Math.round(commScore));
+  
+  // Clarity & Fluency - based on vocabulary and structure, minimal scaling
+  const vocabDiversity = speechAnalysis?.vocabulary_analysis?.diversity || speechAnalysis?.basic_metrics?.vocabulary_diversity || 0.5;
+  const structureScore = speechAnalysis?.structure_analysis?.variety_score || 50;
+  const clarityRaw = ((vocabDiversity * 100 + structureScore) / 2);
+  // Only slight reduction for very low scores
+  const scaledClarityScore = clarityRaw > 50
+    ? Math.min(95, Math.round(clarityRaw))
+    : Math.min(95, Math.round(clarityRaw * 0.95)); // Only 5% reduction for very low clarity
+  
+  // Confidence & Delivery - based on confidence score, no scaling reduction
+  const confScore = speechAnalysis?.confidence_score || baseScore;
+  const scaledConfScore = Math.min(95, Math.round(confScore));
+  
+  // Speech Quality - same as quality score, no scaling reduction
+  const speechScore = speechAnalysis?.quality_score || baseScore;
+  const scaledSpeechScore = Math.min(95, Math.round(speechScore));
+  
   return [
     {
       name: "Communication Skills",
-      score: Math.round(speechAnalysis?.quality_score || baseScore),
+      score: scaledCommScore,
       comment: generateCommunicationComment(speechAnalysis)
     },
     {
-      name: "Technical Knowledge",
-      score: Math.round(interviewPrediction?.technical_score || baseScore),
-      comment: generateTechnicalComment(transcriptText, interviewPrediction)
+      name: "Clarity & Fluency",
+      score: scaledClarityScore,
+      comment: generateClarityComment(speechAnalysis)
     },
     {
-      name: "Problem-Solving",
-      score: Math.round(interviewPrediction?.problem_solving_score || baseScore),
-      comment: generateProblemSolvingComment(transcriptText)
-    },
-    {
-      name: "Confidence & Clarity",
-      score: Math.round(speechAnalysis?.confidence_score || baseScore),
+      name: "Confidence & Delivery",
+      score: scaledConfScore,
       comment: generateConfidenceComment(speechAnalysis)
     },
     {
-      name: "Overall Performance",
-      score: Math.round(interviewPrediction?.overall_score || baseScore),
-      comment: generateOverallComment(interviewPrediction)
+      name: "Speech Quality",
+      score: scaledSpeechScore,
+      comment: generateSpeechQualityComment(speechAnalysis)
     }
   ];
 }
 
-// --------- Local JS heuristic fallbacks (when Python fails) ---------
-function simpleSpeechAnalysis(text: string) {
-  const lower = text.toLowerCase();
-  const words = lower.split(/\s+/).filter(Boolean);
-  const wordCount = words.length;
-  // Extra penalty for very short text (< 30 words)
-  const focusLengthPenalty = wordCount < 30 ? Math.min(25, (30 - wordCount) * 1.5) : 0;
-  const fillerWords = ['um','uh','like','you know','actually','basically','literally'];
-  const fillerCount = fillerWords.reduce((acc, fw) => acc + (lower.match(new RegExp(`\\b${fw.replace(/\s+/g, "\\s+")}\\b`, 'g'))?.length || 0), 0);
-  const fillerRate = wordCount ? fillerCount / wordCount : 0;
-  const uniqueWords = new Set(words).size;
-  const vocabularyDiversity = wordCount ? uniqueWords / wordCount : 0;
-  // Start from 75, penalize filler and reward diversity
-  let quality = 75 - Math.min(25, fillerRate * 200) + Math.min(15, vocabularyDiversity * 20) - focusLengthPenalty;
-  quality = Math.max(40, Math.min(95, quality));
-
-  return {
-    quality_score: Math.round(quality),
-    filler_word_analysis: {
-      filler_count: fillerCount,
-      filler_rate: fillerRate,
-      is_acceptable: fillerRate < 0.15,
-    },
-    repetition_analysis: {
-      repetition_count: 0,
-      repetition_rate: 0,
-      is_acceptable: true,
-    },
-    basic_metrics: {
-      vocabulary_diversity: vocabularyDiversity,
-      unique_words: uniqueWords,
-      avg_sentence_length: 0,
-    },
-    recommendations: [],
-  };
-}
-
-function simpleInterviewPrediction(text: string, interviewData: any) {
-  const lower = text.toLowerCase();
-  const techHints = ['algorithm','data structure','optimization','scalability','architecture','design','cache','index','queue'];
-  const commHints = ['approach','solution','trade-off','clarify','assumption','iterate','measure'];
-  const psHints = ['step','process','method','strategy'];
-  const countHits = (hints: string[]) => hints.filter(h => lower.includes(h)).length;
-  const tech = Math.min(100, 55 + countHits(techHints) * 8);
-  const comm = Math.min(100, 60 + countHits(commHints) * 6);
-  const ps = Math.min(100, 55 + countHits(psHints) * 10);
-  const success_probability = Math.max(0.4, Math.min(0.95, (tech + comm + ps) / 300));
-  const overall_score = Math.round((tech + comm + success_probability * 100) / 3);
-  return {
-    technical_score: Math.round(tech),
-    communication_score: Math.round(comm),
-    problem_solving_score: Math.round(ps),
-    success_probability,
-    overall_score,
-  };
-}
+// Note: All heuristics removed - Python ML models are required
 
 function generateCommunicationComment(speechAnalysis: any) {
   if (!speechAnalysis) return "Unable to analyze communication patterns.";
@@ -336,31 +555,35 @@ function generateCommunicationComment(speechAnalysis: any) {
   }
 }
 
-function generateTechnicalComment(transcriptText: string, interviewPrediction: any) {
-  const technicalKeywords = ['algorithm', 'data structure', 'optimization', 'scalability', 'architecture', 'design pattern'];
-  const keywordCount = technicalKeywords.filter(keyword => 
-    transcriptText.toLowerCase().includes(keyword)
-  ).length;
+function generateClarityComment(speechAnalysis: any) {
+  if (!speechAnalysis) return "Unable to analyze clarity and fluency.";
   
-  if (keywordCount >= 4) {
-    return "Strong technical knowledge demonstrated with relevant terminology.";
-  } else if (keywordCount >= 2) {
-    return "Good technical understanding with some relevant concepts mentioned.";
+  const vocabDiversity = speechAnalysis.vocabulary_analysis?.diversity || speechAnalysis.basic_metrics?.vocabulary_diversity || 0;
+  const structureQuality = speechAnalysis.structure_analysis?.structure_quality || 'fair';
+  const varietyScore = speechAnalysis.structure_analysis?.variety_score || 50;
+  
+  if (vocabDiversity > 0.7 && structureQuality === 'excellent' && varietyScore > 70) {
+    return "Excellent clarity and fluency with varied vocabulary and well-structured sentences.";
+  } else if (vocabDiversity > 0.5 && structureQuality !== 'poor' && varietyScore > 50) {
+    return "Good clarity and fluency with room for improvement in sentence variety.";
   } else {
-    return "Consider using more technical terminology to demonstrate expertise.";
+    return "Work on improving clarity by using more varied vocabulary and better sentence structure.";
   }
 }
 
-function generateProblemSolvingComment(transcriptText: string) {
-  const problemSolvingKeywords = ['approach', 'solution', 'step', 'process', 'method', 'strategy'];
-  const keywordCount = problemSolvingKeywords.filter(keyword => 
-    transcriptText.toLowerCase().includes(keyword)
-  ).length;
+function generateSpeechQualityComment(speechAnalysis: any) {
+  if (!speechAnalysis) return "Unable to assess speech quality.";
   
-  if (keywordCount >= 3) {
-    return "Good problem-solving approach with structured thinking.";
+  const qualityScore = speechAnalysis.quality_score || 0;
+  const fillerRate = speechAnalysis.filler_word_analysis?.filler_rate || 0;
+  const repetitionRate = speechAnalysis.repetition_analysis?.repetition_rate || 0;
+  
+  if (qualityScore >= 80 && fillerRate < 0.1 && repetitionRate < 0.05) {
+    return "Excellent speech quality with minimal filler words and repetition.";
+  } else if (qualityScore >= 60) {
+    return "Good speech quality. Continue working on reducing filler words and repetition.";
   } else {
-    return "Consider explaining your problem-solving process more clearly.";
+    return "Speech quality needs improvement. Focus on reducing filler words, pauses, and repetition.";
   }
 }
 
@@ -379,62 +602,64 @@ function generateConfidenceComment(speechAnalysis: any) {
   }
 }
 
-function generateOverallComment(interviewPrediction: any) {
-  if (!interviewPrediction) return "Overall performance shows potential for improvement.";
-  
-  const successProb = interviewPrediction.success_probability || 0;
-  
-  if (successProb >= 0.8) {
-    return "Excellent interview performance with high success probability.";
-  } else if (successProb >= 0.6) {
-    return "Good interview performance with solid potential for success.";
-  } else {
-    return "Interview performance shows areas for improvement to increase success chances.";
-  }
-}
+// Removed generateOverallComment - no longer used since we removed "Overall Performance" category
 
 function generateInsights(speechAnalysis: any, interviewPrediction: any, transcriptText: string) {
   const strengths = [];
   const areasForImprovement = [];
 
-  // Analyze speech patterns
+  // Analyze speech patterns only (we're not analyzing content/technical knowledge)
   if (speechAnalysis) {
     const fillerRate = speechAnalysis.filler_word_analysis?.filler_rate || 0;
+    const repetitionRate = speechAnalysis.repetition_analysis?.repetition_rate || 0;
+    const pauseRate = speechAnalysis.pause_analysis?.pause_rate || 0;
     const qualityScore = speechAnalysis.quality_score || 0;
+    const confidenceScore = speechAnalysis.confidence_score || 0;
+    const vocabDiversity = speechAnalysis.vocabulary_analysis?.diversity || speechAnalysis.basic_metrics?.vocabulary_diversity || 0;
+    const structureQuality = speechAnalysis.structure_analysis?.structure_quality || 'fair';
     
-    if (qualityScore >= 70) {
-      strengths.push("Clear and articulate speech delivery");
+    // Strengths based on speech analysis
+    if (qualityScore >= 75) {
+      strengths.push("Excellent overall speech quality");
     }
     
-    if (fillerRate < 0.15) {
+    if (fillerRate < 0.12) {
       strengths.push("Minimal use of filler words");
+    } else if (fillerRate >= 0.20) {
+      areasForImprovement.push("Significantly reduce filler words like 'um', 'uh', 'like' for clearer communication");
     } else {
-      areasForImprovement.push("Reduce filler words like 'um', 'uh', 'like'");
+      areasForImprovement.push("Work on reducing filler words");
     }
-  }
-
-  // Analyze content
-  const technicalKeywords = ['algorithm', 'data structure', 'optimization', 'scalability'];
-  const technicalCount = technicalKeywords.filter(keyword => 
-    transcriptText.toLowerCase().includes(keyword)
-  ).length;
-  
-  if (technicalCount >= 2) {
-    strengths.push("Demonstrated technical knowledge");
-  } else {
-    areasForImprovement.push("Include more technical details and examples");
-  }
-
-  // Analyze structure
-  const structureKeywords = ['first', 'then', 'next', 'finally', 'however', 'therefore'];
-  const structureCount = structureKeywords.filter(keyword => 
-    transcriptText.toLowerCase().includes(keyword)
-  ).length;
-  
-  if (structureCount >= 2) {
-    strengths.push("Well-structured responses");
-  } else {
-    areasForImprovement.push("Structure responses with clear beginning, middle, and end");
+    
+    if (repetitionRate < 0.08) {
+      strengths.push("Good vocabulary variety with minimal repetition");
+    } else if (repetitionRate >= 0.15) {
+      areasForImprovement.push("Avoid repeating the same words - use synonyms and vary your vocabulary");
+    }
+    
+    if (pauseRate < 0.15) {
+      strengths.push("Smooth speech flow with appropriate pacing");
+    } else if (pauseRate >= 0.25) {
+      areasForImprovement.push("Too many pauses detected - work on smoother transitions between thoughts");
+    }
+    
+    if (vocabDiversity > 0.6) {
+      strengths.push("Rich and varied vocabulary");
+    } else if (vocabDiversity < 0.4) {
+      areasForImprovement.push("Expand your vocabulary - use more specific and varied terms");
+    }
+    
+    if (structureQuality === 'excellent') {
+      strengths.push("Well-structured sentences with good variety");
+    } else if (structureQuality === 'poor') {
+      areasForImprovement.push("Improve sentence structure - vary sentence lengths for better clarity");
+    }
+    
+    if (confidenceScore >= 75) {
+      strengths.push("Confident and clear delivery");
+    } else if (confidenceScore < 50) {
+      areasForImprovement.push("Work on building confidence - reduce hesitation and practice speaking more assertively");
+    }
   }
 
   // Default insights if none generated
@@ -443,7 +668,7 @@ function generateInsights(speechAnalysis: any, interviewPrediction: any, transcr
   }
   
   if (areasForImprovement.length === 0) {
-    areasForImprovement.push("Continue practicing to improve interview skills");
+    areasForImprovement.push("Continue practicing to improve speech delivery and clarity");
   }
 
   return { strengths, areasForImprovement };

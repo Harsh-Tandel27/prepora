@@ -63,10 +63,11 @@ export async function POST(request: NextRequest) {
     const settings = voiceSettings || DEFAULT_VOICE_SETTINGS;
 
     // Generate speech with optimized settings
+    // Using eleven_turbo_v2 which is available on free tier (replaces deprecated eleven_monolingual_v1)
     const audio = await client.textToSpeech.convert(voiceId || 'pNInz6obpgDQGcFmaJgB', {
       text: text,
       voiceSettings: settings,
-      modelId: 'eleven_monolingual_v1'
+      modelId: 'eleven_turbo_v2' // Updated to free tier compatible model
     });
 
     return new NextResponse(audio, {

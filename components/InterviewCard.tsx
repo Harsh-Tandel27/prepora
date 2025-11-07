@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import DisplayTechIcons from "./DisplayTechIcons";
 
 import { cn, getRandomInterviewCover } from "@/lib/utils";
-import { getFeedbackByInterviewId } from "@/lib/actions/general.action";
+import { getInterviewById } from "@/lib/actions/general.action";
 
 const InterviewCard = async ({
   interviewId,
@@ -16,13 +16,8 @@ const InterviewCard = async ({
   techstack,
   createdAt,
 }: InterviewCardProps) => {
-  const feedback =
-    userId && interviewId
-      ? await getFeedbackByInterviewId({
-          interviewId,
-          userId,
-        })
-      : null;
+  const interview = interviewId ? await getInterviewById(interviewId) : null;
+  const feedback = interview?.analysis || null;
 
   const normalizedType = /mix/gi.test(type) ? "Mixed" : type;
 
@@ -34,7 +29,7 @@ const InterviewCard = async ({
     }[normalizedType] || "bg-light-600";
 
   const formattedDate = dayjs(
-    feedback?.createdAt || createdAt || Date.now()
+    interview?.createdAt || createdAt || Date.now()
   ).format("MMM D, YYYY");
 
   return (
@@ -92,14 +87,8 @@ const InterviewCard = async ({
           <DisplayTechIcons techStack={techstack} />
 
           <Button className="btn-primary">
-            <Link
-              href={
-                feedback
-                  ? `/interview/${interviewId}/feedback`
-                  : `/interview/${interviewId}`
-              }
-            >
-              {feedback ? "Check Feedback" : "View Interview"}
+            <Link href={`/interview/${interviewId}`}>
+              {feedback ? "View Results" : "View Interview"}
             </Link>
           </Button>
         </div>

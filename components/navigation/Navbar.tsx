@@ -16,7 +16,7 @@ export function Navbar({ user }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-sm border-b border-gray-800">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/5 backdrop-blur-md border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -29,10 +29,10 @@ export function Navbar({ user }: NavbarProps) {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="/landing" className="text-gray-300 hover:text-white transition-colors">
+            <Link href="/landing#features" className="text-gray-300 hover:text-white transition-colors">
               Features
             </Link>
-            <Link href="/landing#features" className="text-gray-300 hover:text-white transition-colors">
+            <Link href="/landing#how" className="text-gray-300 hover:text-white transition-colors">
               How it Works
             </Link>
             <Link href="/landing#stats" className="text-gray-300 hover:text-white transition-colors">
@@ -75,17 +75,17 @@ export function Navbar({ user }: NavbarProps) {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-800">
+          <div className="md:hidden py-4 border-t border-white/10">
             <div className="flex flex-col space-y-4">
               <Link 
-                href="/landing" 
+                href="/landing#features" 
                 className="text-gray-300 hover:text-white transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Features
               </Link>
               <Link 
-                href="/landing#features" 
+                href="/landing#how" 
                 className="text-gray-300 hover:text-white transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
